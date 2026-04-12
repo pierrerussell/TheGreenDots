@@ -1,0 +1,44 @@
+# .NET
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.cache
+*.log
+.vs/
+*.DotSettings.user
+
+*.md
+*.txt
+# Secrets - don't commit these
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
+
+/ProjectCallisto.API/wwwroot
+projectcallisto.client/obj
+# Node / Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+coverage/
+
+# Build
+*.nupkg

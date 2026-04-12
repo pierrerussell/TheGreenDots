@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ProjectCallisto.API/ProjectCallisto.API.csproj" />
+  <Project Path="projectcallisto.client/projectcallisto.client.esproj">
+    <BuildType Project="Debug" />
+    <Build />
+  </Project>
+</Solution>
