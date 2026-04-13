@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.API.Configuration;
+using ProjectCallisto.API.Services;
+using ProjectCallisto.EfCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>                                                                                                                                                                                           
@@ -8,13 +11,18 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestHeadersTotalSize = 64 * 1024; // 64KB                                                                                                                                                                    
 });            
 // Add services to the container.
-
+builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddHttpClient();
 builder.Services.Configure<MicrosoftGraphOptions>(
     builder.Configuration.GetSection("AzureAd"));
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+builder.Services.AddScoped<IOrganisationOnboardingService, OrganisationOnboardingService>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -38,6 +46,7 @@ builder.Services.AddAuthentication(options =>
         options.Scope.Add("profile");
         options.Scope.Add("email");
         options.CallbackPath = "/signin-oidc";
+        options.MapInboundClaims = false;
     });
 
 var app = builder.Build();

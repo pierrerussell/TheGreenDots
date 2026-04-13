@@ -1,5 +1,6 @@
-import { Component, signal, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, signal, inject, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 type Step = 'connect' | 'loading' | 'preview' | 'pricing';
 
@@ -10,14 +11,22 @@ export interface TeamMember {
   status: 'available' | 'away' | 'busy' | 'dnd' | 'offline';
 }
 
+interface Organisation {
+  id: string;
+  name: string;
+  tenantId: string;
+}
+
 @Component({
   selector: 'app-add-organization',
   standalone: true,
   templateUrl: './add-organization.component.html',
   styleUrl: './add-organization.component.scss',
 })
-export class AddOrganizationComponent {
+export class AddOrganizationComponent implements OnInit {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private http = inject(HttpClient);
 
   currentStep = signal<Step>('connect');
   selectedPlan = signal<'trial' | 'basic'>('trial');
@@ -32,6 +41,31 @@ export class AddOrganizationComponent {
   ];
 
   private stepOrder: Step[] = ['connect', 'loading', 'preview', 'pricing'];
+
+  ngOnInit(): void {
+    const success = this.route.snapshot.queryParamMap.get('success');
+    const orgId = this.route.snapshot.queryParamMap.get('orgId');
+
+    if (success === 'true' && orgId) {
+      this.loadOrganisation(orgId);
+    }
+  }
+
+  private loadOrganisation(orgId: string): void {
+    this.currentStep.set('loading');
+    this.loadingMessage.set('Loading organisation details...');
+
+    this.http.get<Organisation>(`/api/organisations/${orgId}`).subscribe({
+      next: (org) => {
+        this.tenantName.set(org.name);
+        this.currentStep.set('preview');
+      },
+      error: (err) => {
+        console.error('Failed to load organisation', err);
+        this.currentStep.set('connect');
+      },
+    });
+  }
 
   isStepComplete(stepId: Step): boolean {
     const currentIndex = this.stepOrder.indexOf(this.currentStep());
@@ -64,26 +98,7 @@ export class AddOrganizationComponent {
   }
 
   connectToMicrosoft(): void {
-    this.currentStep.set('loading');
-    this.loadingMessage.set('Connecting to Microsoft...');
-
-    // Simulate OAuth flow
-    setTimeout(() => {
-      this.loadingMessage.set('Fetching team members...');
-    }, 1000);
-
-    setTimeout(() => {
-      // Simulate loaded data
-      this.teamMembers.set([
-        { id: '1', displayName: 'Alice Johnson', email: 'alice@contoso.com', status: 'available' },
-        { id: '2', displayName: 'Bob Smith', email: 'bob@contoso.com', status: 'busy' },
-        { id: '3', displayName: 'Carol Williams', email: 'carol@contoso.com', status: 'away' },
-        { id: '4', displayName: 'David Brown', email: 'david@contoso.com', status: 'offline' },
-        { id: '5', displayName: 'Eve Davis', email: 'eve@contoso.com', status: 'dnd' },
-        { id: '6', displayName: 'Frank Miller', email: 'frank@contoso.com', status: 'available' },
-      ]);
-      this.currentStep.set('preview');
-    }, 2000);
+    window.location.href = '/api/auth/microsoft/connect';
   }
 
   continueToPricing(): void {

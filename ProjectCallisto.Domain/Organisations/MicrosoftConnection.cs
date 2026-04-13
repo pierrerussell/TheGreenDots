@@ -1,0 +1,17 @@
+namespace ProjectCallisto.Domain.Organisations;
+
+public class MicrosoftConnection
+{
+    public Guid Id {get; set; }
+    // User who OAuthed to microsoft to get this token
+    public Guid UserId { get; set; }
+    // Microsoft entra tenant id that this user OAuthed to
+    public string TenantId {get; set; }
+
+    public string AccessToken {get; set; }
+    public string RefreshToken {get; set; }
+    public DateTimeOffset ExpiresAt {get; set; }
+    public DateTimeOffset CreatedAt {get; set; }
+
+
+}

@@ -4,4 +4,6 @@
     <BuildType Project="Debug" />
     <Build />
   </Project>
+  <Project Path="ProjectCallisto.Domain/ProjectCallisto.Domain.csproj" />
+  <Project Path="ProjectCallisto.EfCore/ProjectCallisto.EfCore.csproj" />
 </Solution>

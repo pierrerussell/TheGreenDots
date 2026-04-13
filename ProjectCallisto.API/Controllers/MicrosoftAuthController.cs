@@ -1,22 +1,30 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ProjectCallisto.API.Configuration;
+using ProjectCallisto.API.Services;
+using ProjectCallisto.EfCore;
 
 namespace ProjectCallisto.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("/api")]
 public class MicrosoftAuthController : ControllerBase
 {
-    private readonly IOptions<MicrosoftGraphOptions> _options;
-    private readonly HttpClient _httpClient;
-    
-    public MicrosoftAuthController( IOptions<MicrosoftGraphOptions> options,  IHttpClientFactory httpClientFactory)
+    private readonly MicrosoftGraphOptions _options;
+    private readonly AppDbContext _dbContext;
+    private readonly IOrganisationOnboardingService _onboardingService;
+
+    public MicrosoftAuthController(
+        IOptions<MicrosoftGraphOptions> options,
+        AppDbContext dbContext,
+        IOrganisationOnboardingService onboardingService)
     {
-        _options = options;
-        _httpClient = httpClientFactory.CreateClient();
+        _options = options.Value;
+        _dbContext = dbContext;
+        _onboardingService = onboardingService;
     }
 
     [HttpGet("auth/microsoft/connect")]
@@ -35,10 +43,10 @@ public class MicrosoftAuthController : ControllerBase
 
         var queryParams = new Dictionary<string, string?>
         {
-            ["client_id"] = _options.Value.ClientId,
+            ["client_id"] = _options.ClientId,
             ["response_type"] = "code",
-            ["redirect_uri"] = _options.Value.RedirectUri,
-            ["scope"] = string.Join(" ", _options.Value.Scopes),
+            ["redirect_uri"] = _options.RedirectUri,
+            ["scope"] = string.Join(" ", _options.Scopes),
             ["response_mode"] = "query",
             ["state"] = state
         };
@@ -52,41 +60,30 @@ public class MicrosoftAuthController : ControllerBase
     [HttpGet("auth/microsoft/callback")]
     public async Task<IActionResult> Callback([FromQuery] string code, [FromQuery] string state)
     {
+        // Validate state
         var savedState = Request.Cookies["ms_auth_state"];
         if (state != savedState)
         {
             return BadRequest("Invalid state");
         }
-        
-        // exchange code for token
-        var formBody = new FormUrlEncodedContent(new Dictionary<string, string?>
-        {
-            ["client_id"] = _options.Value.ClientId,
-            ["client_secret"] = _options.Value.ClientSecret,
-            ["code"] = code,
-            ["redirect_uri"] = _options.Value.RedirectUri,
-            ["grant_type"] = "authorization_code"
-        });
-        var response = await _httpClient.PostAsync("https://login.microsoftonline.com/organizations/oauth2/v2.0/token", formBody);
-        var tokenString = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-        {
-            return BadRequest($"Token exchange failed: {tokenString}");
-        }
         Response.Cookies.Delete("ms_auth_state");
-        var token = JsonSerializer.Deserialize<MicrosoftTokenResponse>(tokenString);
-        return Ok(token);
 
+        // Get current user
+        var subjectId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.SubjectId == subjectId);
+        if (user == null)
+        {
+            return BadRequest("User not found");
+        }
 
+        try
+        {
+            var organisation = await _onboardingService.ConnectOrganisationAsync(user, code);
+            return Redirect($"/onboarding/add-organization?success=true&orgId={organisation.Id}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
-}
-
-public class MicrosoftTokenResponse
-{
-    [JsonPropertyName("access_token")]
-    public string AccessToken { get; set; }
-    [JsonPropertyName("refresh_token")]
-    public string RefreshToken { get; set; }
-    [JsonPropertyName("expires_in")]
-    public int  ExpiresIn { get; set; }
 }

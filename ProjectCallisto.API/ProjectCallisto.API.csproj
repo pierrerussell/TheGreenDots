@@ -17,6 +17,10 @@
         <PackageReference Include="Microsoft.Identity.Client" Version="4.83.3" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\ProjectCallisto.EfCore\ProjectCallisto.EfCore.csproj" />
+    </ItemGroup>
+
     <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
         <ItemGroup>
             <DistFiles Include="$(SpaRoot)\dist\projectcallisto.client\browser\**" />
