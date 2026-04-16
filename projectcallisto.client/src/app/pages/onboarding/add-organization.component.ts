@@ -151,6 +151,6 @@ export class AddOrganizationComponent implements OnInit {
       DoNotDisturb: 'bg-status-dnd',
       Offline: 'bg-status-offline',
     };
-    return colors[availability] || 'bg-stone-300';
+    return colors[availability] || 'bg-surface-500';
   }
 }

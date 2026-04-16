@@ -15,6 +15,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'organisation/:id',
+    loadComponent: () =>
+      import('./pages/organisation/organisation.component').then(m => m.OrganisationComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: '**',
     redirectTo: '',
   },
