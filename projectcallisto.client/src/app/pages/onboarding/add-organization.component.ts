@@ -7,8 +7,10 @@ type Step = 'connect' | 'loading' | 'preview' | 'pricing';
 export interface TeamMember {
   id: string;
   displayName: string;
-  email: string;
-  status: 'available' | 'away' | 'busy' | 'dnd' | 'offline';
+  email: string | null;
+  jobTitle: string | null;
+  availability: string;
+  activity: string | null;
 }
 
 interface Organisation {
@@ -58,11 +60,26 @@ export class AddOrganizationComponent implements OnInit {
     this.http.get<Organisation>(`/api/organisations/${orgId}`).subscribe({
       next: (org) => {
         this.tenantName.set(org.name);
-        this.currentStep.set('preview');
+        this.loadMembers(orgId);
       },
       error: (err) => {
         console.error('Failed to load organisation', err);
         this.currentStep.set('connect');
+      },
+    });
+  }
+
+  private loadMembers(orgId: string): void {
+    this.loadingMessage.set('Loading team members...');
+
+    this.http.get<TeamMember[]>(`/api/organisations/${orgId}/members`).subscribe({
+      next: (members) => {
+        this.teamMembers.set(members);
+        this.currentStep.set('preview');
+      },
+      error: (err) => {
+        console.error('Failed to load members', err);
+        this.currentStep.set('preview'); // Still show preview, just without members
       },
     });
   }
@@ -124,14 +141,16 @@ export class AddOrganizationComponent implements OnInit {
       .slice(0, 2);
   }
 
-  getStatusColor(status: string): string {
+  getStatusColor(availability: string): string {
+    // Microsoft Graph availability values: Available, Busy, DoNotDisturb, BeRightBack, Away, Offline
     const colors: Record<string, string> = {
-      available: 'bg-status-available',
-      away: 'bg-status-away',
-      busy: 'bg-status-busy',
-      dnd: 'bg-status-dnd',
-      offline: 'bg-status-offline',
+      Available: 'bg-status-available',
+      Away: 'bg-status-away',
+      BeRightBack: 'bg-status-away',
+      Busy: 'bg-status-busy',
+      DoNotDisturb: 'bg-status-dnd',
+      Offline: 'bg-status-offline',
     };
-    return colors[status] || 'bg-stone-300';
+    return colors[availability] || 'bg-stone-300';
   }
 }

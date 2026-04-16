@@ -78,8 +78,8 @@ public class MicrosoftAuthController : ControllerBase
 
         try
         {
-            var organisation = await _onboardingService.ConnectOrganisationAsync(user, code);
-            return Redirect($"/onboarding/add-organization?success=true&orgId={organisation.Id}");
+            var result = await _onboardingService.ConnectOrganisationAsync(user, code);
+            return Redirect($"/onboarding/add-organization?success=true&orgId={result.OrganisationId}");
         }
         catch (InvalidOperationException ex)
         {

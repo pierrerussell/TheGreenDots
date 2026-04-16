@@ -7,9 +7,10 @@ namespace ProjectCallisto.EfCore;
 public class AppDbContext : DbContext
 {
     public DbSet<User> Users { get; set; }
-    public DbSet<Organisation>  Organisations { get; set; }
+    public DbSet<Organisation> Organisations { get; set; }
     public DbSet<OrganisationUser> OrganisationUsers { get; set; }
-    public DbSet<MicrosoftConnection>  MicrosoftConnections { get; set; }
+    public DbSet<MicrosoftConnection> MicrosoftConnections { get; set; }
+    public DbSet<TenantMember> TenantMembers { get; set; }
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {}
 
@@ -65,6 +66,25 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.UserId);
             builder.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<TenantMember>(builder =>
+        {
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.MicrosoftUserId)
+                .HasMaxLength(256)
+                .IsRequired();
+            builder.Property(x => x.DisplayName)
+                .HasMaxLength(256)
+                .IsRequired();
+            builder.Property(x => x.Email)
+                .HasMaxLength(256);
+            builder.Property(x => x.JobTitle)
+                .HasMaxLength(256);
+            builder.HasOne<Organisation>()
+                .WithMany()
+                .HasForeignKey(x => x.OrganisationId);
+            builder.HasIndex(x => new { x.OrganisationId, x.MicrosoftUserId }).IsUnique();
         });
 
     }

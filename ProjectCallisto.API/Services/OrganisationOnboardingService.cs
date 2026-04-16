@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using ProjectCallisto.API.Configuration;
 using ProjectCallisto.Domain.Organisations;
@@ -10,7 +11,24 @@ namespace ProjectCallisto.API.Services;
 
 public interface IOrganisationOnboardingService
 {
-    Task<Organisation> ConnectOrganisationAsync(User user, string authCode);
+    Task<OnboardingResult> ConnectOrganisationAsync(User user, string authCode);
+}
+
+public class OnboardingResult
+{
+    public Guid OrganisationId { get; init; }
+    public string OrganisationName { get; init; } = string.Empty;
+    public List<MemberWithPresence> Members { get; init; } = [];
+}
+
+public class MemberWithPresence
+{
+    public Guid Id { get; init; }
+    public string DisplayName { get; init; } = string.Empty;
+    public string? Email { get; init; }
+    public string? JobTitle { get; init; }
+    public string Availability { get; init; } = "Offline";
+    public string? Activity { get; init; }
 }
 
 public class OrganisationOnboardingService : IOrganisationOnboardingService
@@ -29,7 +47,7 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
         _options = options.Value;
     }
 
-    public async Task<Organisation> ConnectOrganisationAsync(User user, string authCode)
+    public async Task<OnboardingResult> ConnectOrganisationAsync(User user, string authCode)
     {
         var token = await ExchangeCodeForTokenAsync(authCode);
         var tenantId = ExtractTenantIdFromToken(token.AccessToken);
@@ -39,9 +57,33 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
         var organisation = await CreateOrganisationAsync(orgName, tenantId, connection.Id);
         await CreateOrganisationUserAsync(organisation.Id, user.Id);
 
+        // Fetch and store tenant members
+        var graphUsers = await FetchTenantUsersAsync(token.AccessToken);
+        var tenantMembers = await CreateTenantMembersAsync(organisation.Id, graphUsers);
+
         await _dbContext.SaveChangesAsync();
 
-        return organisation;
+        // Fetch presence for all members (after save so we have IDs)
+        var memberIds = graphUsers.Select(u => u.Id).ToList();
+        var presenceMap = await FetchPresenceAsync(token.AccessToken, memberIds);
+
+        // Build result with presence
+        var membersWithPresence = tenantMembers.Select(m => new MemberWithPresence
+        {
+            Id = m.Id,
+            DisplayName = m.DisplayName,
+            Email = m.Email,
+            JobTitle = m.JobTitle,
+            Availability = presenceMap.GetValueOrDefault(m.MicrosoftUserId)?.Availability ?? "Offline",
+            Activity = presenceMap.GetValueOrDefault(m.MicrosoftUserId)?.Activity
+        }).ToList();
+
+        return new OnboardingResult
+        {
+            OrganisationId = organisation.Id,
+            OrganisationName = organisation.Name,
+            Members = membersWithPresence
+        };
     }
 
     private async Task<MicrosoftTokenResponse> ExchangeCodeForTokenAsync(string authCode)
@@ -145,6 +187,134 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
 
         await _dbContext.OrganisationUsers.AddAsync(organisationUser);
     }
+
+    private async Task<List<GraphUser>> FetchTenantUsersAsync(string accessToken)
+    {
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var users = new List<GraphUser>();
+        var url = "https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail,jobTitle&$top=999";
+
+        while (!string.IsNullOrEmpty(url))
+        {
+            var response = await _httpClient.GetAsync(url);
+            var json = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Failed to fetch users: {json}");
+            }
+
+            var data = JsonSerializer.Deserialize<GraphUsersResponse>(json);
+            if (data?.Value != null)
+            {
+                users.AddRange(data.Value);
+            }
+
+            url = data?.NextLink;
+        }
+
+        return users;
+    }
+
+    private async Task<List<TenantMember>> CreateTenantMembersAsync(Guid organisationId, List<GraphUser> graphUsers)
+    {
+        var tenantMembers = graphUsers.Select(u => new TenantMember
+        {
+            OrganisationId = organisationId,
+            MicrosoftUserId = u.Id,
+            DisplayName = u.DisplayName ?? "Unknown",
+            Email = u.Mail,
+            JobTitle = u.JobTitle,
+            CreatedAt = DateTimeOffset.UtcNow
+        }).ToList();
+
+        await _dbContext.TenantMembers.AddRangeAsync(tenantMembers);
+        return tenantMembers;
+    }
+
+    private async Task<Dictionary<string, PresenceInfo>> FetchPresenceAsync(string accessToken, List<string> userIds)
+    {
+        if (userIds.Count == 0)
+            return new Dictionary<string, PresenceInfo>();
+
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var requestBody = new { ids = userIds };
+        var content = new StringContent(
+            JsonSerializer.Serialize(requestBody),
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await _httpClient.PostAsync(
+            "https://graph.microsoft.com/v1.0/communications/getPresencesByUserId",
+            content);
+
+        var json = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // Don't fail onboarding if presence fetch fails - just return empty
+            return new Dictionary<string, PresenceInfo>();
+        }
+
+        var data = JsonSerializer.Deserialize<GraphPresenceResponse>(json);
+        return data?.Value?.ToDictionary(p => p.Id, p => new PresenceInfo
+        {
+            Availability = p.Availability ?? "Offline",
+            Activity = p.Activity
+        }) ?? new Dictionary<string, PresenceInfo>();
+    }
+}
+
+internal class GraphUser
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("displayName")]
+    public string? DisplayName { get; set; }
+
+    [JsonPropertyName("mail")]
+    public string? Mail { get; set; }
+
+    [JsonPropertyName("jobTitle")]
+    public string? JobTitle { get; set; }
+}
+
+internal class GraphUsersResponse
+{
+    [JsonPropertyName("value")]
+    public List<GraphUser>? Value { get; set; }
+
+    [JsonPropertyName("@odata.nextLink")]
+    public string? NextLink { get; set; }
+}
+
+internal class GraphPresence
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("availability")]
+    public string? Availability { get; set; }
+
+    [JsonPropertyName("activity")]
+    public string? Activity { get; set; }
+}
+
+internal class GraphPresenceResponse
+{
+    [JsonPropertyName("value")]
+    public List<GraphPresence>? Value { get; set; }
+}
+
+internal class PresenceInfo
+{
+    public string Availability { get; set; } = "Offline";
+    public string? Activity { get; set; }
 }
 
 internal class MicrosoftTokenResponse

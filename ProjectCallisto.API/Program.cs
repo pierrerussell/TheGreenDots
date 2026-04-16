@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
+using ProjectCallisto.API.BackgroundServices;
 using ProjectCallisto.API.Configuration;
 using ProjectCallisto.API.Services;
 using ProjectCallisto.EfCore;
@@ -23,6 +24,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 builder.Services.AddScoped<IOrganisationOnboardingService, OrganisationOnboardingService>();
+builder.Services.AddScoped<IMicrosoftTokenService, MicrosoftTokenService>();
+builder.Services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
+builder.Services.AddHostedService<PresencePollingService>();
 
 builder.Services.AddAuthentication(options =>
     {
