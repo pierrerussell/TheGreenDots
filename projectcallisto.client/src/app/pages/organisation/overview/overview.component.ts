@@ -73,29 +73,60 @@ export class OverviewComponent implements OnInit {
   private calculateSegments(entries: PresenceTimelineEntry['entries']): TimelineSegment[] {
     const totalMinutes = 24 * 60; // Full day
 
-    return entries.map(entry => {
-      const start = new Date(entry.startTime);
-      const end = entry.endTime ? new Date(entry.endTime) : new Date();
+    // Get midnight of the day we're viewing
+    const viewingDayMidnight = new Date(this.today);
+    viewingDayMidnight.setHours(0, 0, 0, 0);
+    const midnightTime = viewingDayMidnight.getTime();
+    const endOfDayTime = midnightTime + (totalMinutes * 60 * 1000);
 
-      const startMinutes = start.getHours() * 60 + start.getMinutes();
-      const endMinutes = end.getHours() * 60 + end.getMinutes();
+    return entries
+      .map(entry => {
+        const start = new Date(entry.startTime);
+        const end = entry.endTime ? new Date(entry.endTime) : new Date();
 
-      // Handle segments that might span midnight
-      const clampedStart = Math.max(0, startMinutes);
-      const clampedEnd = Math.min(totalMinutes, endMinutes > startMinutes ? endMinutes : totalMinutes);
+        // Skip segments that end before our viewing day starts
+        if (end.getTime() <= midnightTime) {
+          return null;
+        }
 
-      const left = (clampedStart / totalMinutes) * 100;
-      const width = Math.max(0.3, ((clampedEnd - clampedStart) / totalMinutes) * 100);
+        // Skip segments that start after our viewing day ends
+        if (start.getTime() >= endOfDayTime) {
+          return null;
+        }
 
-      return {
-        left,
-        width,
-        status: entry.status,
-        startTime: entry.startTime,
-        endTime: entry.endTime || new Date().toISOString(),
-        durationMinutes: entry.durationMinutes,
-      };
-    });
+        // Calculate minutes from midnight of the viewing day
+        const startMinutes = Math.max(0, (start.getTime() - midnightTime) / (60 * 1000));
+        const endMinutes = Math.min(totalMinutes, (end.getTime() - midnightTime) / (60 * 1000));
+
+        // If segment is entirely outside our day, skip it
+        if (startMinutes >= totalMinutes || endMinutes <= 0) {
+          return null;
+        }
+
+        const clampedStart = Math.max(0, startMinutes);
+        const clampedEnd = Math.min(totalMinutes, endMinutes);
+
+        const left = (clampedStart / totalMinutes) * 100;
+        const width = Math.max(0.3, ((clampedEnd - clampedStart) / totalMinutes) * 100);
+
+        // Adjust displayed times to match what's actually shown
+        const displayStartTime = start.getTime() < midnightTime
+          ? viewingDayMidnight.toISOString()
+          : entry.startTime;
+        const displayEndTime = end.getTime() > endOfDayTime
+          ? new Date(endOfDayTime).toISOString()
+          : (entry.endTime || new Date().toISOString());
+
+        return {
+          left,
+          width,
+          status: entry.status,
+          startTime: displayStartTime,
+          endTime: displayEndTime,
+          durationMinutes: Math.round(clampedEnd - clampedStart),
+        };
+      })
+      .filter((segment): segment is TimelineSegment => segment !== null);
   }
 
   refreshData(): void {

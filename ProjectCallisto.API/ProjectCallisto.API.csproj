@@ -21,15 +21,39 @@
       <ProjectReference Include="..\ProjectCallisto.EfCore\ProjectCallisto.EfCore.csproj" />
     </ItemGroup>
 
-    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
-        <ItemGroup>
-            <DistFiles Include="$(SpaRoot)\dist\projectcallisto.client\browser\**" />
-            <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
-                <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
-                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-                <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-            </ResolvedFileToPublish>
-        </ItemGroup>
-    </Target>
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="wwwroot\3rdpartylicenses.txt" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-7GIZKA5S.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-AS4KNA2M.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-BXU6BPC2.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-INVGOSNJ.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-IVJLTGFD.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-K3WQ4OES.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-NKCFYRVI.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-O7ISCYOO.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-Q7BGYCAW.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-R5MSBZOH.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-V3IEN6NM.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-XI6423FM.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-XNBXRFV4.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\chunk-YV7F32QS.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\favicon.ico" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\index.html" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\main-IIXZLFM4.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\browser\styles-2XHNXU5X.css" />
+      <_ContentIncludedByDefault Remove="wwwroot\prerendered-routes.json" />
+    </ItemGroup>
+
+<!--    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">-->
+
+<!--        <ItemGroup>-->
+<!--            <DistFiles Include="wwwroot\browser\**" />-->
+<!--            <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">-->
+<!--                <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>-->
+<!--                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>-->
+<!--                <ExcludeFromSingleFile>true</ExcludeFromSingleFile>-->
+<!--            </ResolvedFileToPublish>-->
+<!--        </ItemGroup>-->
+<!--    </Target>-->
 
 </Project>

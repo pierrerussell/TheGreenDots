@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using ProjectCallisto.API.BackgroundServices;
 using ProjectCallisto.API.Configuration;
 using ProjectCallisto.API.Services;
@@ -54,7 +55,7 @@ builder.Services.AddAuthentication(options =>
     });
 
 var app = builder.Build();
-
+var browserPath = Path.Combine(app.Environment.WebRootPath, "browser");
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -66,11 +67,18 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseDefaultFiles(new DefaultFilesOptions()
+{
+    FileProvider = new PhysicalFileProvider(browserPath)
+}); 
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(browserPath)
+});
 
 app.MapControllers();
 
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("/browser/index.html");
 
 app.Run();

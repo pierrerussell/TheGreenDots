@@ -59,6 +59,25 @@ public class OrganisationsController : ControllerBase
         return Ok(org);
     }
 
+    [HttpGet("{id:guid}/access")]
+    public async Task<IActionResult> CheckAccess(Guid id)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var hasAccess = await _dbContext.OrganisationUsers
+            .AnyAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id);
+
+        if (!hasAccess)
+        {
+            return Ok(new { hasAccess = false, role = (string?)null });
+        }
+
+        // For now, everyone is a member. Add role logic later if needed
+        // TODO add role logic once role table is created.
+        return Ok(new { hasAccess = true, role = "member" });
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteOrganisation(Guid id)
     {
@@ -198,20 +217,15 @@ public class OrganisationsController : ControllerBase
 
         var memberIds = members.Select(m => m.Id).ToList();
 
-        // Get presence history for the requested date
+        // Query from 11pm previous day to ensure we have starting state
+        // (With hourly recording, we're guaranteed at least one record in the 11pm-midnight window)
         var dayStart = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var dayEnd = date.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+        var queryStart = dayStart.AddHours(-1); // 11pm previous day
 
         var historyRecords = await _dbContext.PresenceHistories
-            .Where(ph => memberIds.Contains(ph.TenantMemberId) && ph.RecordedAt >= dayStart && ph.RecordedAt <= dayEnd)
+            .Where(ph => memberIds.Contains(ph.TenantMemberId) && ph.RecordedAt >= queryStart && ph.RecordedAt <= dayEnd)
             .OrderBy(ph => ph.RecordedAt)
-            .ToListAsync();
-
-        // Also get the last status before the day started (to know starting state)
-        var lastBeforeDay = await _dbContext.PresenceHistories
-            .Where(ph => memberIds.Contains(ph.TenantMemberId) && ph.RecordedAt < dayStart)
-            .GroupBy(ph => ph.TenantMemberId)
-            .Select(g => g.OrderByDescending(ph => ph.RecordedAt).First())
             .ToListAsync();
 
         var now = DateTimeOffset.UtcNow;
@@ -226,25 +240,50 @@ public class OrganisationsController : ControllerBase
 
             var entries = new List<TimelineEntry>();
 
-            // If there's a status from before the day, use it as starting point
-            var priorStatus = lastBeforeDay.FirstOrDefault(h => h.TenantMemberId == member.Id);
-            if (priorStatus != null && memberHistory.Count > 0)
+            if (memberHistory.Count == 0)
             {
-                // Add segment from midnight to first change
-                var firstChange = memberHistory[0];
-                entries.Add(new TimelineEntry(
-                    priorStatus.Availability,
-                    dayStart,
-                    firstChange.RecordedAt,
-                    (int)(firstChange.RecordedAt - dayStart).TotalMinutes
-                ));
+                result.Add(new MemberTimelineResponse(member.Id, member.DisplayName, entries));
+                continue;
             }
 
-            // Process each status change
-            for (int i = 0; i < memberHistory.Count; i++)
+            // Find records before and after midnight
+            var recordsBeforeMidnight = memberHistory.Where(h => h.RecordedAt < dayStart).ToList();
+            var recordsAfterMidnight = memberHistory.Where(h => h.RecordedAt >= dayStart).ToList();
+
+            // If there's a status from before midnight, use it as starting point
+            if (recordsBeforeMidnight.Count > 0)
             {
-                var current = memberHistory[i];
-                var next = i + 1 < memberHistory.Count ? memberHistory[i + 1] : null;
+                var lastBeforeMidnight = recordsBeforeMidnight.Last();
+
+                if (recordsAfterMidnight.Count > 0)
+                {
+                    // Add segment from midnight to first change after midnight
+                    var firstAfterMidnight = recordsAfterMidnight[0];
+                    entries.Add(new TimelineEntry(
+                        lastBeforeMidnight.Availability,
+                        dayStart,
+                        firstAfterMidnight.RecordedAt,
+                        (int)(firstAfterMidnight.RecordedAt - dayStart).TotalMinutes
+                    ));
+                }
+                else
+                {
+                    // No changes after midnight - single segment for whole day
+                    var effectiveEnd = date < DateOnly.FromDateTime(DateTime.UtcNow) ? dayEnd : now;
+                    entries.Add(new TimelineEntry(
+                        lastBeforeMidnight.Availability,
+                        dayStart,
+                        effectiveEnd,
+                        (int)(effectiveEnd - dayStart).TotalMinutes
+                    ));
+                }
+            }
+
+            // Process each status change after midnight
+            for (int i = 0; i < recordsAfterMidnight.Count; i++)
+            {
+                var current = recordsAfterMidnight[i];
+                var next = i + 1 < recordsAfterMidnight.Count ? recordsAfterMidnight[i + 1] : null;
 
                 DateTimeOffset? endTime = next?.RecordedAt;
                 int durationMinutes;

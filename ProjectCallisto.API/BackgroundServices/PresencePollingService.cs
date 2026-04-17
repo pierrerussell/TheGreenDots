@@ -90,7 +90,7 @@ public class PresencePollingService : BackgroundService
                 .Select(g => g.OrderByDescending(ph => ph.RecordedAt).First())
                 .ToDictionaryAsync(ph => ph.TenantMemberId, ct);
 
-            // Record changes (when availability OR activity changes)
+            // Record changes (when availability OR activity changes OR last record was >1 hour ago)
             var now = DateTimeOffset.UtcNow;
             var newRecords = new List<PresenceHistory>();
 
@@ -99,11 +99,12 @@ public class PresencePollingService : BackgroundService
                 if (!presenceMap.TryGetValue(member.MicrosoftUserId, out var currentPresence))
                     continue;
 
-                var hasChanged = !lastStatuses.TryGetValue(member.Id, out var lastStatus)
-                    || lastStatus.Availability != currentPresence.Availability
-                    || lastStatus.Activity != (currentPresence.Activity ?? string.Empty);
+                var shouldStore = !lastStatuses.TryGetValue(member.Id, out var lastStatus) // No previous record
+                    || lastStatus.Availability != currentPresence.Availability // Availability changed
+                    || lastStatus.Activity != (currentPresence.Activity ?? string.Empty) // Activity changed
+                    || (now - lastStatus.RecordedAt).TotalHours >= 1; // At least 1 hour since last record
 
-                if (hasChanged)
+                if (shouldStore)
                 {
                     newRecords.Add(new PresenceHistory
                     {
