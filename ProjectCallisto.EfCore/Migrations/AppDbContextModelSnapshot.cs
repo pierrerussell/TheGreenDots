@@ -54,7 +54,7 @@ namespace ProjectCallisto.EfCore.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("MicrosoftConnections");
+                    b.ToTable("MicrosoftConnections", (string)null);
                 });
 
             modelBuilder.Entity("ProjectCallisto.Domain.Organisations.Organisation", b =>
@@ -83,7 +83,7 @@ namespace ProjectCallisto.EfCore.Migrations
 
                     b.HasIndex("ActiveConnectionId");
 
-                    b.ToTable("Organisations");
+                    b.ToTable("Organisations", (string)null);
                 });
 
             modelBuilder.Entity("ProjectCallisto.Domain.Organisations.OrganisationUser", b =>
@@ -98,7 +98,7 @@ namespace ProjectCallisto.EfCore.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("OrganisationUsers");
+                    b.ToTable("OrganisationUsers", (string)null);
                 });
 
             modelBuilder.Entity("ProjectCallisto.Domain.Organisations.PresenceHistory", b =>
@@ -127,7 +127,7 @@ namespace ProjectCallisto.EfCore.Migrations
 
                     b.HasIndex("TenantMemberId", "RecordedAt");
 
-                    b.ToTable("PresenceHistories");
+                    b.ToTable("PresenceHistories", (string)null);
                 });
 
             modelBuilder.Entity("ProjectCallisto.Domain.Organisations.TenantMember", b =>
@@ -165,7 +165,7 @@ namespace ProjectCallisto.EfCore.Migrations
                     b.HasIndex("OrganisationId", "MicrosoftUserId")
                         .IsUnique();
 
-                    b.ToTable("TenantMembers");
+                    b.ToTable("TenantMembers", (string)null);
                 });
 
             modelBuilder.Entity("ProjectCallisto.Domain.Users.User", b =>
@@ -196,7 +196,7 @@ namespace ProjectCallisto.EfCore.Migrations
                     b.HasIndex("SubjectId")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("ProjectCallisto.Domain.Organisations.MicrosoftConnection", b =>
