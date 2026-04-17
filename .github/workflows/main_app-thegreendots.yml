@@ -25,8 +25,8 @@ jobs:
           
       - name: npm install and build
         run: |
-          npm install --prefix /projectcallisto.client
-          npm run build --prefix /projectcallisto.client
+          npm install --prefix ./projectcallisto.client
+          npm run build --prefix ./projectcallisto.client
         
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
