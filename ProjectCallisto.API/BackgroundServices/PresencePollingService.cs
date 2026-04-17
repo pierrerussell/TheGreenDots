@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.API.Services;
+using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
 
 namespace ProjectCallisto.API.BackgroundServices;
@@ -59,7 +60,9 @@ public class PresencePollingService : BackgroundService
         try
         {
             using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var tokenService = scope.ServiceProvider.GetRequiredService<IMicrosoftTokenService>();
+            var graphService = scope.ServiceProvider.GetRequiredService<IMicrosoftGraphService>();
 
             // Get valid (refreshed if needed) connection
             var connection = await tokenService.GetValidConnectionAsync(conn.ConnectionId, ct);
@@ -69,8 +72,56 @@ public class PresencePollingService : BackgroundService
                 return;
             }
 
-            // TODO: Poll presence using connection.AccessToken
-            _logger.LogInformation("Polling organisation {OrganisationId}, Organisation Name: {OrganisationName}", conn.OrganisationId, conn.TenantName);
+            // Get all members for this organisation
+            var members = await dbContext.TenantMembers
+                .Where(m => m.OrganisationId == conn.OrganisationId)
+                .ToListAsync(ct);
+
+            if (members.Count == 0) return;
+
+            // Fetch current presence from Microsoft Graph
+            var memberIds = members.Select(m => m.MicrosoftUserId).ToList();
+            var presenceMap = await graphService.GetPresenceAsync(connection, memberIds);
+
+            // Get the last recorded status for each member
+            var lastStatuses = await dbContext.PresenceHistories
+                .Where(ph => members.Select(m => m.Id).Contains(ph.TenantMemberId))
+                .GroupBy(ph => ph.TenantMemberId)
+                .Select(g => g.OrderByDescending(ph => ph.RecordedAt).First())
+                .ToDictionaryAsync(ph => ph.TenantMemberId, ct);
+
+            // Record changes (when availability OR activity changes)
+            var now = DateTimeOffset.UtcNow;
+            var newRecords = new List<PresenceHistory>();
+
+            foreach (var member in members)
+            {
+                if (!presenceMap.TryGetValue(member.MicrosoftUserId, out var currentPresence))
+                    continue;
+
+                var hasChanged = !lastStatuses.TryGetValue(member.Id, out var lastStatus)
+                    || lastStatus.Availability != currentPresence.Availability
+                    || lastStatus.Activity != (currentPresence.Activity ?? string.Empty);
+
+                if (hasChanged)
+                {
+                    newRecords.Add(new PresenceHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantMemberId = member.Id,
+                        Availability = currentPresence.Availability,
+                        Activity = currentPresence.Activity ?? string.Empty,
+                        RecordedAt = now
+                    });
+                }
+            }
+
+            if (newRecords.Count > 0)
+            {
+                dbContext.PresenceHistories.AddRange(newRecords);
+                await dbContext.SaveChangesAsync(ct);
+                _logger.LogInformation("Recorded {Count} presence changes for {OrgName}", newRecords.Count, conn.TenantName);
+            }
         }
         catch (Exception ex)
         {

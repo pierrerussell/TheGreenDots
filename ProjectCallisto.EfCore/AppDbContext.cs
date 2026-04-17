@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<OrganisationUser> OrganisationUsers { get; set; }
     public DbSet<MicrosoftConnection> MicrosoftConnections { get; set; }
     public DbSet<TenantMember> TenantMembers { get; set; }
+    public DbSet<PresenceHistory> PresenceHistories { get; set; }
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {}
 
@@ -85,6 +86,22 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.OrganisationId);
             builder.HasIndex(x => new { x.OrganisationId, x.MicrosoftUserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<PresenceHistory>(builder =>
+        {
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.Availability)
+                .HasMaxLength(64)
+                .IsRequired();
+            builder.Property(x => x.Activity)
+                .HasMaxLength(64)
+                .IsRequired();
+            builder.HasOne<TenantMember>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantMemberId);
+            // Index for querying a member's history chronologically
+            builder.HasIndex(x => new { x.TenantMemberId, x.RecordedAt });
         });
 
     }
