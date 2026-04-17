@@ -17,7 +17,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+        
+      - name: build with Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.17.1'
+          
+      - name: npm install and build
+        run: |
+          npm install --prefix /projectcallisto.client
+          npm run build --prefix /projectcallisto.client
+        
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
