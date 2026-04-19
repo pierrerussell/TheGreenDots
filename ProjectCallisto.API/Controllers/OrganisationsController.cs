@@ -200,7 +200,7 @@ public class OrganisationsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/presence-timeline")]
-    public async Task<IActionResult> GetPresenceTimeline(Guid id, [FromQuery] DateOnly date)
+    public async Task<IActionResult> GetPresenceTimeline(Guid id, [FromQuery] DateTime startTime, [FromQuery] DateTime endTime)
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
@@ -217,11 +217,11 @@ public class OrganisationsController : ControllerBase
 
         var memberIds = members.Select(m => m.Id).ToList();
 
-        // Query from 11pm previous day to ensure we have starting state
-        // (With hourly recording, we're guaranteed at least one record in the 11pm-midnight window)
-        var dayStart = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var dayEnd = date.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
-        var queryStart = dayStart.AddHours(-1); // 11pm previous day
+        // Convert to DateTimeOffset for consistency with database
+        var dayStart = new DateTimeOffset(startTime, TimeSpan.Zero);
+        var dayEnd = new DateTimeOffset(endTime, TimeSpan.Zero);
+        // Query from 1 hour before to ensure we have starting state
+        var queryStart = dayStart.AddHours(-1);
 
         var historyRecords = await _dbContext.PresenceHistories
             .Where(ph => memberIds.Contains(ph.TenantMemberId) && ph.RecordedAt >= queryStart && ph.RecordedAt <= dayEnd)
@@ -269,7 +269,7 @@ public class OrganisationsController : ControllerBase
                 else
                 {
                     // No changes after midnight - single segment for whole day
-                    var effectiveEnd = date < DateOnly.FromDateTime(DateTime.UtcNow) ? dayEnd : now;
+                    var effectiveEnd = dayEnd < now ? dayEnd : now;
                     entries.Add(new TimelineEntry(
                         lastBeforeMidnight.Availability,
                         dayStart,
@@ -285,26 +285,24 @@ public class OrganisationsController : ControllerBase
                 var current = recordsAfterMidnight[i];
                 var next = i + 1 < recordsAfterMidnight.Count ? recordsAfterMidnight[i + 1] : null;
 
-                DateTimeOffset? endTime = next?.RecordedAt;
+                DateTimeOffset? segmentEndTime = next?.RecordedAt;
                 int durationMinutes;
 
-                if (endTime.HasValue)
+                if (segmentEndTime.HasValue)
                 {
-                    durationMinutes = (int)(endTime.Value - current.RecordedAt).TotalMinutes;
+                    durationMinutes = (int)(segmentEndTime.Value - current.RecordedAt).TotalMinutes;
                 }
                 else
                 {
                     // Last segment extends to now (or end of day if viewing past date)
-                    var effectiveEnd = date < DateOnly.FromDateTime(DateTime.UtcNow)
-                        ? dayEnd
-                        : now;
+                    var effectiveEnd = dayEnd < now ? dayEnd : now;
                     durationMinutes = (int)(effectiveEnd - current.RecordedAt).TotalMinutes;
                 }
 
                 entries.Add(new TimelineEntry(
                     current.Availability,
                     current.RecordedAt,
-                    endTime,
+                    segmentEndTime,
                     durationMinutes
                 ));
             }

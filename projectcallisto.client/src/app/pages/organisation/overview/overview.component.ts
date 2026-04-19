@@ -38,10 +38,18 @@ export class OverviewComponent implements OnInit {
   private async loadData(): Promise<void> {
     this.loadingTimeline.set(true);
 
-    const dateStr = this.formatDate(this.today);
+    // Calculate UTC timestamps for start and end of the user's local day
+    const startOfDay = new Date(this.today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(this.today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startTime = startOfDay.toISOString();
+    const endTime = endOfDay.toISOString();
 
     try {
-      const timeline = await this.orgService.getPresenceTimeline(dateStr);
+      const timeline = await this.orgService.getPresenceTimeline(startTime, endTime);
       this.mergeTimelineWithMembers(timeline);
     } catch {
       // If timeline API fails, show members without timeline data

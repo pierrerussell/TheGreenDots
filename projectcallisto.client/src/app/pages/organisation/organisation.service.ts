@@ -126,11 +126,11 @@ export class OrganisationService {
     });
   }
 
-  getPresenceTimeline(date: string): Promise<PresenceTimelineEntry[]> {
+  getPresenceTimeline(startTime: string, endTime: string): Promise<PresenceTimelineEntry[]> {
     return new Promise((resolve, reject) => {
       this.http.get<PresenceTimelineEntry[]>(
         `/api/organisations/${this.currentOrgId}/presence-timeline`,
-        { params: { date } }
+        { params: { startTime, endTime } }
       ).subscribe({
         next: (timeline) => resolve(timeline),
         error: (err) => {

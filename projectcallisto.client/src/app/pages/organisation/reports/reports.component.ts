@@ -47,7 +47,19 @@ export class ReportsComponent implements OnInit {
   private loadTimeline(): void {
     this.loadingTimeline.set(true);
 
-    this.orgService.getPresenceTimeline(this.selectedDate())
+    // Parse the selected date and calculate UTC timestamps for start/end of day
+    const date = new Date(this.selectedDate() + 'T00:00:00');
+
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const startTime = startOfDay.toISOString();
+    const endTime = endOfDay.toISOString();
+
+    this.orgService.getPresenceTimeline(startTime, endTime)
       .then(data => {
         this.timeline.set(data);
         this.loadingTimeline.set(false);
