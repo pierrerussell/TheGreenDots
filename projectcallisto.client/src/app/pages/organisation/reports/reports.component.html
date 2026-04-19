@@ -139,19 +139,19 @@
 
               <!-- Timeline bar -->
               <div class="flex-1 h-8 bg-surface-100 rounded relative overflow-hidden">
-                @for (hour of hours; track hour; let j = $index) {
-                  <div
-                    class="absolute top-0 bottom-0 border-l border-surface-200"
-                    [style.left]="(j / hours.length * 100) + '%'"
-                  ></div>
-                }
-
                 @for (segment of getTimelineSegments(member.entries); track segment.left) {
                   <div
-                    class="absolute top-1 bottom-1 rounded-sm"
+                    class="absolute top-1 bottom-1"
                     [class]="getSegmentColor(segment.status)"
                     [style.left]="segment.left"
                     [style.width]="segment.width"
+                  ></div>
+                }
+
+                @for (hour of hours; track hour; let j = $index) {
+                  <div
+                    class="absolute top-0 bottom-0 w-px bg-white/30"
+                    [style.left]="(j / hours.length * 100) + '%'"
                   ></div>
                 }
               </div>

@@ -115,7 +115,8 @@ export class OverviewComponent implements OnInit {
         const clampedEnd = Math.min(totalMinutes, endMinutes);
 
         const left = (clampedStart / totalMinutes) * 100;
-        const width = Math.max(0.3, ((clampedEnd - clampedStart) / totalMinutes) * 100);
+        // Add 0.1% overlap to prevent 1px gaps from rounding errors
+        const width = Math.max(0.3, ((clampedEnd - clampedStart) / totalMinutes) * 100 + 0.1);
 
         // Adjust displayed times to match what's actually shown
         const displayStartTime = start.getTime() < midnightTime

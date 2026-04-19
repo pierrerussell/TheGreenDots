@@ -149,23 +149,23 @@
 
             <!-- Timeline bar -->
             <div class="flex-1 h-6 bg-surface-100 rounded relative overflow-hidden">
-              <!-- Hour markers -->
-              <div class="absolute inset-0 flex">
-                <div class="flex-1 border-r border-surface-200/50"></div>
-                <div class="flex-1 border-r border-surface-200/50"></div>
-                <div class="flex-1 border-r border-surface-200/50"></div>
-                <div class="flex-1"></div>
-              </div>
-
               <!-- Status segments -->
               @for (segment of member.timelineSegments; track segment.startTime) {
                 <div
-                  class="absolute top-1 bottom-1 rounded-sm cursor-pointer transition-opacity hover:opacity-80"
+                  class="absolute top-1 bottom-1 cursor-pointer transition-opacity hover:opacity-80"
                   [style.left.%]="segment.left"
                   [style.width.%]="segment.width"
                   [style.background-color]="getSegmentColor(segment.status)"
                   (mouseenter)="showTooltip($event, segment)"
                   (mouseleave)="hideTooltip()"
+                ></div>
+              }
+
+              <!-- Hour markers -->
+              @for (hour of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]; track hour) {
+                <div
+                  class="absolute top-0 bottom-0 w-px bg-white/30"
+                  [style.left.%]="(hour / 24) * 100"
                 ></div>
               }
 

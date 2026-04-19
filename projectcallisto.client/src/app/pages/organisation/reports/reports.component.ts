@@ -151,7 +151,8 @@ export class ReportsComponent implements OnInit {
         const clampedEnd = Math.min(totalMinutes, (end.getHours() - dayStart) * 60 + end.getMinutes());
 
         const left = (clampedStart / totalMinutes) * 100;
-        const width = Math.max(0.5, ((clampedEnd - clampedStart) / totalMinutes) * 100);
+        // Add 0.1% overlap to prevent 1px gaps from rounding errors
+        const width = Math.max(0.5, ((clampedEnd - clampedStart) / totalMinutes) * 100 + 0.1);
 
         return { left: `${left}%`, width: `${width}%`, status: entry.status };
       });
