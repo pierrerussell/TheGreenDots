@@ -44,16 +44,16 @@
       <_ContentIncludedByDefault Remove="wwwroot\prerendered-routes.json" />
     </ItemGroup>
 
-<!--    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">-->
+    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
 
-<!--        <ItemGroup>-->
-<!--            <DistFiles Include="wwwroot\browser\**" />-->
-<!--            <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">-->
-<!--                <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>-->
-<!--                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>-->
-<!--                <ExcludeFromSingleFile>true</ExcludeFromSingleFile>-->
-<!--            </ResolvedFileToPublish>-->
-<!--        </ItemGroup>-->
-<!--    </Target>-->
+        <ItemGroup>
+            <DistFiles Include="wwwroot\**" />
+            <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+                <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
+                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+                <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+            </ResolvedFileToPublish>
+        </ItemGroup>
+    </Target>
 
 </Project>
