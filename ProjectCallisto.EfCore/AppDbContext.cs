@@ -67,6 +67,7 @@ public class AppDbContext : DbContext
         {
             builder.HasKey(x => new { x.OrganisationId, x.UserId });
             builder.Property(x => x.Role)
+                .HasConversion<string>()
                 .IsRequired();
             builder.HasOne(ou => ou.User)
                 .WithMany()

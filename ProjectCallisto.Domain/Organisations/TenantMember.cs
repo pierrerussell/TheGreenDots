@@ -11,7 +11,7 @@ public class TenantMember
     public string? JobTitle { get; set; }
     
     public bool IsAssignedSeat { get; set; }
-    
+
     public DateTimeOffset CreatedAt { get; set; }
     
     // Navigation

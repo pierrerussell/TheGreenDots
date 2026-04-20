@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using ProjectCallisto.API.Authorization;
 using ProjectCallisto.API.BackgroundServices;
 using ProjectCallisto.API.Configuration;
 using ProjectCallisto.API.Services;
+using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +31,9 @@ builder.Services.AddScoped<IOrganisationOnboardingService, OrganisationOnboardin
 builder.Services.AddScoped<IMicrosoftTokenService, MicrosoftTokenService>();
 builder.Services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
 builder.Services.AddHostedService<PresencePollingService>();
+
+// Required for authorization handler to access route parameters
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -53,6 +59,32 @@ builder.Services.AddAuthentication(options =>
         options.CallbackPath = "/signin-oidc";
         options.MapInboundClaims = false;
     });
+
+// Add permission-based authorization
+builder.Services.AddAuthorization(options =>
+{
+    // Create a policy for each permission
+    options.AddPolicy(nameof(Permission.ViewDashboard), policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permission.ViewDashboard)));
+
+    options.AddPolicy(nameof(Permission.ManageSeats), policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permission.ManageSeats)));
+
+    options.AddPolicy(nameof(Permission.ManageBilling), policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permission.ManageBilling)));
+
+    options.AddPolicy(nameof(Permission.ExportData), policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permission.ExportData)));
+
+    options.AddPolicy(nameof(Permission.InviteUsers), policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permission.InviteUsers)));
+
+    options.AddPolicy(nameof(Permission.ManageSettings), policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permission.ManageSettings)));
+});
+
+// Register authorization handler
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 var app = builder.Build();
 var browserPath = Path.Combine(app.Environment.WebRootPath, "browser");

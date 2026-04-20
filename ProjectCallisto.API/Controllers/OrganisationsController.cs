@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ProjectCallisto.API.Authorization;
 using ProjectCallisto.API.Services;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.Domain.Users;
@@ -41,19 +42,12 @@ public class OrganisationsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = nameof(Permission.ViewDashboard))]
     public async Task<IActionResult> GetOrganisation(Guid id)
     {
-        var user = await GetCurrentUserAsync();
-        if (user == null) return Unauthorized();
-
-        var org = await _dbContext.OrganisationUsers
-            .Where(ou => ou.UserId == user.Id && ou.OrganisationId == id)
-            .Join(
-                _dbContext.Organisations,
-                ou => ou.OrganisationId,
-                o => o.Id,
-                (ou, o) => o)
-            .FirstOrDefaultAsync();
+        // Authorization already handled by policy - user has access to this org
+        var org = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
 
         if (org == null) return NotFound();
         return Ok(org);
@@ -62,36 +56,63 @@ public class OrganisationsController : ControllerBase
     [HttpGet("{id:guid}/access")]
     public async Task<IActionResult> CheckAccess(Guid id)
     {
+        // Temporarily removed authorization to debug - check manually
+        var subjectId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        Console.WriteLine($"[DEBUG] CheckAccess called for org {id}");
+        Console.WriteLine($"[DEBUG] SubjectId from claims: {subjectId}");
+
         var user = await GetCurrentUserAsync();
+        Console.WriteLine($"[DEBUG] User lookup result: {(user != null ? $"Found (Id: {user.Id}, Email: {user.Email})" : "NULL")}");
+
         if (user == null) return Unauthorized();
 
-        var hasAccess = await _dbContext.OrganisationUsers
-            .AnyAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id);
+        var orgUser = await _dbContext.OrganisationUsers
+            .FirstOrDefaultAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id);
 
-        if (!hasAccess)
+        Console.WriteLine($"[DEBUG] OrgUser lookup result: {(orgUser != null ? $"Found (Role: {orgUser.Role})" : "NULL")}");
+
+        if (orgUser == null)
         {
+            Console.WriteLine($"[DEBUG] Returning hasAccess=false - no OrganisationUser record found");
             return Ok(new { hasAccess = false, role = (string?)null });
         }
 
-        // For now, everyone is a member. Add role logic later if needed
-        // TODO add role logic once role table is created.
-        return Ok(new { hasAccess = true, role = "member" });
+        var roleLower = orgUser.Role.ToString().ToLower();
+        Console.WriteLine($"[DEBUG] Returning hasAccess=true, role={roleLower}");
+        return Ok(new { hasAccess = true, role = roleLower });
+    }
+
+    [HttpGet("{id:guid}/debug-auth")]
+    public async Task<IActionResult> DebugAuth(Guid id)
+    {
+        var subjectId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        var user = await GetCurrentUserAsync();
+
+        var orgUser = user != null
+            ? await _dbContext.OrganisationUsers.FirstOrDefaultAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id)
+            : null;
+
+        return Ok(new
+        {
+            subjectId,
+            userId = user?.Id,
+            userEmail = user?.Email,
+            orgUserId = orgUser?.UserId,
+            orgUserRole = orgUser?.Role.ToString(),
+            orgUserRoleLower = orgUser?.Role.ToString().ToLower(),
+            hasViewDashboardPermission = orgUser != null && RolePermissions.HasPermission(orgUser.Role, Permission.ViewDashboard),
+            hasManageSeatsPermission = orgUser != null && RolePermissions.HasPermission(orgUser.Role, Permission.ManageSeats),
+            allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList()
+        });
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = nameof(Permission.ManageSettings))]
     public async Task<IActionResult> DeleteOrganisation(Guid id)
     {
-        var user = await GetCurrentUserAsync();
-        if (user == null) return Unauthorized();
-
-        var org = await _dbContext.OrganisationUsers
-            .Where(ou => ou.UserId == user.Id && ou.OrganisationId == id)
-            .Join(
-                _dbContext.Organisations,
-                ou => ou.OrganisationId,
-                o => o.Id,
-                (ou, o) => o)
-            .FirstOrDefaultAsync();
+        // Authorization already verified user is admin with ManageSettings permission
+        var org = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
 
         if (org == null) return NotFound();
 
@@ -116,19 +137,12 @@ public class OrganisationsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/members")]
+    [Authorize(Policy = nameof(Permission.ViewDashboard))]
     public async Task<IActionResult> GetMembers(Guid id)
     {
-        var user = await GetCurrentUserAsync();
-        if (user == null) return Unauthorized();
-
-        // Verify access
-        var hasAccess = await _dbContext.OrganisationUsers
-            .AnyAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id);
-        if (!hasAccess) return NotFound();
-
-        // Get members
+        // Authorization already verified access - get only assigned seat members
         var members = await _dbContext.TenantMembers
-            .Where(m => m.OrganisationId == id)
+            .Where(m => m.OrganisationId == id && m.IsAssignedSeat)
             .ToListAsync();
 
         // Get connection for Graph API call
@@ -161,19 +175,12 @@ public class OrganisationsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/presence-history")]
+    [Authorize(Policy = nameof(Permission.ViewDashboard))]
     public async Task<IActionResult> GetPresenceHistory(Guid id, [FromQuery] int limit = 100)
     {
-        var user = await GetCurrentUserAsync();
-        if (user == null) return Unauthorized();
-
-        // Verify access
-        var hasAccess = await _dbContext.OrganisationUsers
-            .AnyAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id);
-        if (!hasAccess) return NotFound();
-
-        // Get member IDs for this organisation
+        // Authorization already verified access - get only assigned seat members
         var memberIds = await _dbContext.TenantMembers
-            .Where(m => m.OrganisationId == id)
+            .Where(m => m.OrganisationId == id && m.IsAssignedSeat)
             .Select(m => m.Id)
             .ToListAsync();
 
@@ -200,19 +207,12 @@ public class OrganisationsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/presence-timeline")]
+    [Authorize(Policy = nameof(Permission.ViewDashboard))]
     public async Task<IActionResult> GetPresenceTimeline(Guid id, [FromQuery] DateTime startTime, [FromQuery] DateTime endTime)
     {
-        var user = await GetCurrentUserAsync();
-        if (user == null) return Unauthorized();
-
-        // Verify access
-        var hasAccess = await _dbContext.OrganisationUsers
-            .AnyAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id);
-        if (!hasAccess) return NotFound();
-
-        // Get members for this organisation
+        // Authorization already verified access - get only assigned seat members
         var members = await _dbContext.TenantMembers
-            .Where(m => m.OrganisationId == id)
+            .Where(m => m.OrganisationId == id && m.IsAssignedSeat)
             .ToListAsync();
 
         var memberIds = members.Select(m => m.Id).ToList();
@@ -313,6 +313,114 @@ public class OrganisationsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{id:guid}/all-members")]
+    [Authorize(Policy = nameof(Permission.ViewDashboard))]
+    public async Task<IActionResult> GetAllMembers(Guid id)
+    {
+        // Returns ALL members (not filtered by IsAssignedSeat)
+        // Used by: People page (all users), Settings page (admins only for seat management)
+        var members = await _dbContext.TenantMembers
+            .Where(m => m.OrganisationId == id)
+            .Select(m => new AllMembersResponse(
+                m.Id,
+                m.DisplayName,
+                m.Email,
+                m.JobTitle,
+                m.IsAssignedSeat
+            ))
+            .ToListAsync();
+
+        return Ok(members);
+    }
+
+    [HttpPost("{id:guid}/members/{memberId:guid}/assign-seat")]
+    [Authorize(Policy = nameof(Permission.ManageSeats))] 
+    public async Task<IActionResult> AssignSeat(Guid id, Guid memberId)
+    {
+        // Authorization already verified user has ManageSeats permission
+
+        // Get subscription to check seat limit
+        var organisation = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (organisation?.Subscription == null)
+            return NotFound("Organisation or subscription not found");
+
+        // Check seat limit
+        var assignedCount = await _dbContext.TenantMembers
+            .CountAsync(m => m.OrganisationId == id && m.IsAssignedSeat);
+
+        if (assignedCount >= organisation.Subscription.PaidSeats)
+        {
+            return BadRequest(new { error = "No seats available. Upgrade your plan to assign more members." });
+        }
+
+        // Assign seat
+        var member = await _dbContext.TenantMembers
+            .FirstOrDefaultAsync(m => m.Id == memberId && m.OrganisationId == id);
+
+        if (member == null)
+            return NotFound("Member not found");
+
+        if (member.IsAssignedSeat)
+            return BadRequest(new { error = "Member already has an assigned seat" });
+
+        member.IsAssignedSeat = true;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok();
+    }
+
+    [HttpPost("{id:guid}/members/{memberId:guid}/unassign-seat")]
+    [Authorize(Policy = nameof(Permission.ManageSeats))] 
+    public async Task<IActionResult> UnassignSeat(Guid id, Guid memberId)
+    {
+        // Authorization already verified user has ManageSeats permission
+
+        var member = await _dbContext.TenantMembers
+            .FirstOrDefaultAsync(m => m.Id == memberId && m.OrganisationId == id);
+
+        if (member == null)
+            return NotFound("Member not found");
+
+        if (!member.IsAssignedSeat)
+            return BadRequest(new { error = "Member does not have an assigned seat" });
+
+        member.IsAssignedSeat = false;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok();
+    }
+
+    [HttpGet("{id:guid}/subscription")]
+    [Authorize(Policy = nameof(Permission.ManageBilling))]
+    public async Task<IActionResult> GetSubscription(Guid id)
+    {
+        // Authorization already verified user has ManageBilling permission (admin-only)
+
+        var organisation = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (organisation?.Subscription == null)
+            return NotFound("Organisation or subscription not found");
+
+        var assignedSeats = await _dbContext.TenantMembers
+            .CountAsync(m => m.OrganisationId == id && m.IsAssignedSeat);
+
+        return Ok(new SubscriptionResponse(
+            organisation.Subscription.Id,
+            organisation.Subscription.Status.ToString().ToLowerInvariant(),
+            organisation.Subscription.PaidSeats,
+            assignedSeats,
+            organisation.Subscription.TrialEndsAt,
+            organisation.StripeCustomerId,
+            organisation.Subscription.StripeSubscriptionId,
+            organisation.Subscription.CreatedAt
+        ));
+    }
+
     private async Task<User?> GetCurrentUserAsync()
     {
         var subjectId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
@@ -350,4 +458,23 @@ public record TimelineEntry(
     DateTimeOffset StartTime,
     DateTimeOffset? EndTime,
     int DurationMinutes
+);
+
+public record AllMembersResponse(
+    Guid Id,
+    string DisplayName,
+    string? Email,
+    string? JobTitle,
+    bool IsAssignedSeat
+);
+
+public record SubscriptionResponse(
+    Guid Id,
+    string Status,
+    int PaidSeats,
+    int AssignedSeats,
+    DateTimeOffset? TrialEndsAt,
+    string? StripeCustomerId,
+    string? StripeSubscriptionId,
+    DateTimeOffset CreatedAt
 );

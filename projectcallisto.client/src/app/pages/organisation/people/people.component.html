@@ -3,27 +3,29 @@
   <div class="flex items-center justify-between mb-6 animate-fade-up">
     <div>
       <h1 class="text-xl font-semibold text-surface-900">People</h1>
-      <p class="text-sm text-surface-500">{{ orgService.members().length }} tracked team members</p>
+      <p class="text-sm text-surface-500">{{ allMembers().length }} team members in your Microsoft tenant</p>
     </div>
 
-    <button
-      (click)="syncFromMicrosoft()"
-      [disabled]="syncing()"
-      class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
-    >
-      @if (syncing()) {
-        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Syncing...
-      } @else {
-        <svg class="w-4 h-4" viewBox="0 0 23 23" fill="currentColor">
-          <path d="M0 0h11v11H0zM12 0h11v11H12zM0 12h11v11H0zM12 12h11v11H12z"/>
-        </svg>
-        Sync from Microsoft
-      }
-    </button>
+    @if (isAdmin()) {
+      <button
+        (click)="syncFromMicrosoft()"
+        [disabled]="syncing()"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
+      >
+        @if (syncing()) {
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Syncing...
+        } @else {
+          <svg class="w-4 h-4" viewBox="0 0 23 23" fill="currentColor">
+            <path d="M0 0h11v11H0zM12 0h11v11H12zM0 12h11v11H0zM12 12h11v11H12z"/>
+          </svg>
+          Sync from Microsoft
+        }
+      </button>
+    }
   </div>
 
   <!-- Sync status messages -->
@@ -52,9 +54,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
       </svg>
       <div>
-        <p class="text-sm font-medium text-blue-900">Sync to add new team members</p>
+        <p class="text-sm font-medium text-blue-900">Your full team roster</p>
         <p class="text-sm text-blue-700 mt-1">
-          If new people have joined your Microsoft 365 tenant, click "Sync from Microsoft" to pull in their profiles and start tracking their presence.
+          This shows everyone in your Microsoft 365 tenant. Members marked "Tracked" have presence monitoring enabled. @if (isAdmin()) { Manage tracking seats in Settings. }
         </p>
       </div>
     </div>
@@ -62,7 +64,15 @@
 
   <!-- Team list -->
   <div class="bg-white rounded-xl border border-surface-200 overflow-hidden animate-fade-up" style="animation-delay: 0.1s;">
-    @if (orgService.members().length === 0) {
+    @if (loading()) {
+      <div class="p-12 text-center">
+        <svg class="w-8 h-8 animate-spin text-surface-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-sm text-surface-500">Loading team members...</p>
+      </div>
+    } @else if (allMembers().length === 0) {
       <div class="p-12 text-center">
         <div class="w-14 h-14 rounded-full bg-surface-100 flex items-center justify-center mx-auto mb-4">
           <svg class="w-7 h-7 text-surface-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -71,44 +81,46 @@
         </div>
         <h3 class="text-lg font-semibold text-surface-900 mb-2">No team members yet</h3>
         <p class="text-surface-500 mb-6 max-w-sm mx-auto">
-          Click "Sync from Microsoft" to pull in team members from your Microsoft 365 tenant.
+          @if (isAdmin()) {
+            Click "Sync from Microsoft" to pull in team members from your Microsoft 365 tenant.
+          } @else {
+            No team members have been synced from Microsoft yet. Contact your admin.
+          }
         </p>
-        <button
-          (click)="syncFromMicrosoft()"
-          [disabled]="syncing()"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 23 23" fill="currentColor">
-            <path d="M0 0h11v11H0zM12 0h11v11H12zM0 12h11v11H0zM12 12h11v11H12z"/>
-          </svg>
-          Sync from Microsoft
-        </button>
+        @if (isAdmin()) {
+          <button
+            (click)="syncFromMicrosoft()"
+            [disabled]="syncing()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 23 23" fill="currentColor">
+              <path d="M0 0h11v11H0zM12 0h11v11H12zM0 12h11v11H0zM12 12h11v11H12z"/>
+            </svg>
+            Sync from Microsoft
+          </button>
+        }
       </div>
     } @else {
       <!-- Table header -->
       <div class="px-5 py-3 border-b border-surface-100 bg-surface-50 grid grid-cols-12 gap-4 text-xs font-semibold text-surface-500 uppercase tracking-wider">
         <div class="col-span-5">Name</div>
         <div class="col-span-4">Job Title</div>
-        <div class="col-span-3 text-right">Status</div>
+        <div class="col-span-3 text-right">Tracking</div>
       </div>
 
       <!-- Table rows -->
       <div class="divide-y divide-surface-100">
-        @for (member of orgService.members(); track member.id; let i = $index) {
+        @for (member of allMembers(); track member.id; let i = $index) {
           <div
             class="px-5 py-4 grid grid-cols-12 gap-4 items-center hover:bg-surface-50 transition-colors opacity-0 animate-fade-up"
             [style.animation-delay]="(0.12 + i * 0.02) + 's'"
           >
             <!-- Name & email -->
             <div class="col-span-5 flex items-center gap-3 min-w-0">
-              <div class="relative flex-shrink-0">
+              <div class="flex-shrink-0">
                 <div class="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center">
-                  <span class="text-sm font-semibold text-surface-600">{{ orgService.getInitials(member.displayName) }}</span>
+                  <span class="text-sm font-semibold text-surface-600">{{ getInitials(member.displayName) }}</span>
                 </div>
-                <span
-                  class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white"
-                  [class]="orgService.getStatusColor(member.availability)"
-                ></span>
               </div>
               <div class="min-w-0">
                 <p class="text-sm font-medium text-surface-900 truncate">{{ member.displayName }}</p>
@@ -121,20 +133,21 @@
               <p class="text-sm text-surface-600 truncate">{{ member.jobTitle || '—' }}</p>
             </div>
 
-            <!-- Status -->
+            <!-- Tracking status -->
             <div class="col-span-3 flex justify-end">
-              <span
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                [class]="{
-                  'bg-green-50 text-green-700': member.availability === 'Available',
-                  'bg-yellow-50 text-yellow-700': member.availability === 'Away' || member.availability === 'BeRightBack',
-                  'bg-red-50 text-red-700': member.availability === 'Busy' || member.availability === 'DoNotDisturb',
-                  'bg-surface-100 text-surface-600': member.availability === 'Offline'
-                }"
-              >
-                <span class="w-1.5 h-1.5 rounded-full" [class]="orgService.getStatusColor(member.availability)"></span>
-                {{ orgService.getStatusLabel(member.availability) }}
-              </span>
+              @if (member.isAssignedSeat) {
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  Tracked
+                </span>
+              } @else {
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-100 text-surface-500 rounded-full text-xs font-medium">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                  </svg>
+                  Not Tracked
+                </span>
+              }
             </div>
           </div>
         }
