@@ -44,6 +44,11 @@ export interface WeeklyReportSettings {
   timeUtc: string; // e.g., "09:00"
 }
 
+export interface OrganisationAccess {
+  hasAccess: boolean;
+  role: string | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -74,6 +79,17 @@ export class OrganisationService {
   );
 
   private currentOrgId = '';
+
+  checkAccess(orgId: string) : Promise<OrganisationAccess> {
+    return new Promise((resolve, reject) => {
+      this.http.get<OrganisationAccess>(
+        `/api/organisations/${orgId}/access`,
+      ).subscribe({
+        next: (access) => resolve(access),
+        error: (err) => reject(err)
+      })
+    })
+  }
 
   loadOrganisation(orgId: string): void {
     if (this.currentOrgId === orgId && this.organisation()) {

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../auth/auth.guard';
 import { organisationGuard } from './pages/organisation/organisation.guard';
+import { adminGuard } from './pages/organisation/admin.guard';
 
 export const routes: Routes = [
   {
@@ -45,11 +46,13 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import('./pages/organisation/settings/settings.component').then(m => m.SettingsComponent),
+        canActivate: [adminGuard],
       },
       {
         path: 'subscription',
         loadComponent: () =>
           import('./pages/organisation/subscription/subscription.component').then(m => m.SubscriptionComponent),
+        canActivate: [adminGuard],
       },
     ],
   },
