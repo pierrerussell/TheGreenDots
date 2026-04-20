@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
 {
     public DbSet<User> Users { get; set; }
     public DbSet<Organisation> Organisations { get; set; }
+    public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<OrganisationUser> OrganisationUsers { get; set; }
     public DbSet<MicrosoftConnection> MicrosoftConnections { get; set; }
     public DbSet<TenantMember> TenantMembers { get; set; }
@@ -42,17 +43,36 @@ public class AppDbContext : DbContext
                 builder.HasOne<MicrosoftConnection>()
                     .WithMany()
                     .HasForeignKey(x => x.ActiveConnectionId);
+                builder.Navigation(o => o.Subscription).AutoInclude();
             }
         );
+
+        modelBuilder.Entity<Subscription>(builder =>
+        {
+            builder.ToTable("Subscriptions");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.Status).IsRequired();
+            builder.Property(x => x.PaidSeats).IsRequired();
+            builder.Property(x => x.CreatedAt).IsRequired();
+            
+            builder.HasOne(s => s.Organisation)
+                .WithOne(s => s.Subscription)
+                .HasForeignKey<Subscription>(s => s.OrganisationId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+        });
 
         modelBuilder.Entity<OrganisationUser>(builder =>
         {
             builder.HasKey(x => new { x.OrganisationId, x.UserId });
-            builder.HasOne<User>()
+            builder.Property(x => x.Role)
+                .IsRequired();
+            builder.HasOne(ou => ou.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
-            builder.HasOne<Organisation>()
+            builder.HasOne(ou => ou.Organisation)
                 .WithMany()
                 .HasForeignKey(x => x.OrganisationId)
                 .OnDelete(DeleteBehavior.NoAction);
@@ -82,7 +102,7 @@ public class AppDbContext : DbContext
                 .HasMaxLength(256);
             builder.Property(x => x.JobTitle)
                 .HasMaxLength(256);
-            builder.HasOne<Organisation>()
+            builder.HasOne(tm => tm.Organisation)
                 .WithMany()
                 .HasForeignKey(x => x.OrganisationId);
             builder.HasIndex(x => new { x.OrganisationId, x.MicrosoftUserId }).IsUnique();

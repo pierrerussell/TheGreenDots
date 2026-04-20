@@ -9,5 +9,11 @@ public class TenantMember
     public string DisplayName { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? JobTitle { get; set; }
+    
+    public bool IsAssignedSeat { get; set; }
+    
     public DateTimeOffset CreatedAt { get; set; }
+    
+    // Navigation
+    public Organisation Organisation { get; set; } = null!;
 }

@@ -55,7 +55,7 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
 
         var connection = await CreateMicrosoftConnectionAsync(user.Id, tenantId, token);
         var organisation = await CreateOrganisationAsync(orgName, tenantId, connection.Id);
-        await CreateOrganisationUserAsync(organisation.Id, user.Id);
+        await CreateOrganisationUserAsync(organisation.Id, user.Id, OrganisationRole.Admin);
 
         // Fetch and store tenant members
         var graphUsers = await FetchTenantUsersAsync(token.AccessToken);
@@ -165,25 +165,20 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
         string tenantId,
         Guid activeConnectionId)
     {
-        var organisation = new Organisation
-        {
-            Name = name,
-            TenantId = tenantId,
-            ActiveConnectionId = activeConnectionId,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+        var organisation = new Organisation(
+            name: name,
+            microsoftTenantId: tenantId,
+            connectionId: activeConnectionId,
+            trialSeats: 999);
 
         await _dbContext.Organisations.AddAsync(organisation);
         return organisation;
     }
 
-    private async Task CreateOrganisationUserAsync(Guid organisationId, Guid userId)
+    private async Task CreateOrganisationUserAsync(Guid organisationId, Guid userId, OrganisationRole role)
     {
-        var organisationUser = new OrganisationUser
-        {
-            OrganisationId = organisationId,
-            UserId = userId
-        };
+        var organisationUser = new OrganisationUser(organisationId, userId, role);
+        
 
         await _dbContext.OrganisationUsers.AddAsync(organisationUser);
     }
