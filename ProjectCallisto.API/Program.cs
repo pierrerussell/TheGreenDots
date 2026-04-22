@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using ProjectCallisto.API.Authorization;
-using ProjectCallisto.API.BackgroundServices;
+
 
 using ProjectCallisto.API.Services;
 using ProjectCallisto.Application.Microsoft;
@@ -33,8 +33,6 @@ builder.Services.AddScoped<IOrganisationOnboardingService, OrganisationOnboardin
 builder.Services.AddScoped<IMicrosoftTokenService, MicrosoftTokenService>();
 builder.Services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
 builder.Services.AddScoped<IMicrosoftConnectionRepository, MicrosoftConnectionRepository>();
-
-builder.Services.AddHostedService<PresencePollingService>();
 
 // Required for authorization handler to access route parameters
 builder.Services.AddHttpContextAccessor();

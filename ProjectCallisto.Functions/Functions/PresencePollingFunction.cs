@@ -1,42 +1,47 @@
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
-using ProjectCallisto.API.Services;
+using Microsoft.Extensions.Logging;
 using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
 
-namespace ProjectCallisto.API.BackgroundServices;
+namespace ProjectCallisto.Functions.Functions;
 
-public class PresencePollingService : BackgroundService
+public class PresencePollingFunction
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<PresencePollingService> _logger;
-
-    public PresencePollingService(IServiceScopeFactory scopeFactory, ILogger<PresencePollingService> logger)
+    
+    private readonly ILogger<PresencePollingFunction> _logger;
+    private readonly AppDbContext _dbContext;
+    private readonly IMicrosoftTokenService _tokenService;
+    private readonly IMicrosoftGraphService  _graphService;
+    
+    public PresencePollingFunction(                                                                      
+        ILogger<PresencePollingFunction> logger,                                                         
+        AppDbContext dbContext,                                                                          
+        IMicrosoftTokenService tokenService,                                                             
+        IMicrosoftGraphService graphService)                                                             
+    {                                                                                                    
+        _logger = logger;                                                                                
+        _dbContext = dbContext;                                                                          
+        _tokenService = tokenService;                                                                    
+        _graphService = graphService;                                                                    
+    }           
+    
+    [Function("PresencePolling")]
+    public async Task Run([TimerTrigger("*/15 * * * * *")] TimerInfo timerInfo, CancellationToken ct)
     {
-        _scopeFactory = scopeFactory;
-        _logger = logger;
+        _logger.LogInformation("Presence polling function triggered at: {time}", DateTimeOffset.UtcNow);
+        await PollAllOrganisationsAsync(ct);
     }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
-        while (await timer.WaitForNextTickAsync(stoppingToken))
-        {
-            _logger.LogInformation("Dev poll log");
-            _ = PollAllOrganisationsAsync(stoppingToken);
-        }
-    }
-
+    
     private async Task PollAllOrganisationsAsync(CancellationToken ct)
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            var activeConnections = await dbContext.Organisations
+            
+            var activeConnections = await _dbContext.Organisations
                 .Join(
-                    dbContext.MicrosoftConnections,
+                    _dbContext.MicrosoftConnections,
                     org => org.ActiveConnectionId,
                     conn => conn.Id,
                     (org, conn) => new ActiveConnection
@@ -61,13 +66,9 @@ public class PresencePollingService : BackgroundService
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var tokenService = scope.ServiceProvider.GetRequiredService<IMicrosoftTokenService>();
-            var graphService = scope.ServiceProvider.GetRequiredService<IMicrosoftGraphService>();
-
+            
             // Get valid (refreshed if needed) connection
-            var connection = await tokenService.GetValidConnectionAsync(conn.ConnectionId, ct);
+            var connection = await _tokenService.GetValidConnectionAsync(conn.ConnectionId, ct);
             if (connection == null)
             {
                 _logger.LogWarning("Connection {ConnectionId} not found", conn.ConnectionId);
@@ -75,7 +76,7 @@ public class PresencePollingService : BackgroundService
             }
 
             // Get all members for this organisation
-            var members = await dbContext.TenantMembers
+            var members = await _dbContext.TenantMembers
                 .Where(m => m.OrganisationId == conn.OrganisationId)
                 .ToListAsync(ct);
 
@@ -83,10 +84,10 @@ public class PresencePollingService : BackgroundService
 
             // Fetch current presence from Microsoft Graph
             var memberIds = members.Select(m => m.MicrosoftUserId).ToList();
-            var presenceMap = await graphService.GetPresenceAsync(connection, memberIds);
+            var presenceMap = await _graphService.GetPresenceAsync(connection, memberIds);
 
             // Get the last recorded status for each member
-            var lastStatuses = await dbContext.PresenceHistories
+            var lastStatuses = await _dbContext.PresenceHistories
                 .Where(ph => members.Select(m => m.Id).Contains(ph.TenantMemberId))
                 .GroupBy(ph => ph.TenantMemberId)
                 .Select(g => g.OrderByDescending(ph => ph.RecordedAt).First())
@@ -121,8 +122,8 @@ public class PresencePollingService : BackgroundService
 
             if (newRecords.Count > 0)
             {
-                dbContext.PresenceHistories.AddRange(newRecords);
-                await dbContext.SaveChangesAsync(ct);
+                _dbContext.PresenceHistories.AddRange(newRecords);
+                await _dbContext.SaveChangesAsync(ct);
                 _logger.LogInformation("Recorded {Count} presence changes for {OrgName}", newRecords.Count, conn.TenantName);
             }
         }
@@ -139,4 +140,5 @@ public class PresencePollingService : BackgroundService
         public string TenantId { get; init; } = string.Empty;
         public string TenantName { get; init; } = string.Empty;
     }
+    
 }
