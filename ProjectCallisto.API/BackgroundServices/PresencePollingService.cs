@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.API.Services;
+using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
 
@@ -21,6 +22,7 @@ public class PresencePollingService : BackgroundService
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
+            _logger.LogInformation("Dev poll log");
             _ = PollAllOrganisationsAsync(stoppingToken);
         }
     }

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.API.Authorization;
-using ProjectCallisto.API.Services;
+using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.Domain.Users;
 using ProjectCallisto.EfCore;

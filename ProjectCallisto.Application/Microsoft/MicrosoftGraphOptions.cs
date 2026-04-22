@@ -1,4 +1,4 @@
-namespace ProjectCallisto.API.Configuration;
+namespace ProjectCallisto.Application.Microsoft;
 
 public class MicrosoftGraphOptions
 {

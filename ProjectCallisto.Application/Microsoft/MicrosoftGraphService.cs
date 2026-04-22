@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ProjectCallisto.Domain.Organisations;
 
-namespace ProjectCallisto.API.Services;
+namespace ProjectCallisto.Application.Microsoft;
 
 public interface IMicrosoftGraphService
 {
@@ -15,9 +15,9 @@ public class MicrosoftGraphService : IMicrosoftGraphService
     private readonly HttpClient _httpClient;
     private readonly IMicrosoftTokenService _tokenService;
 
-    public MicrosoftGraphService(IHttpClientFactory httpClientFactory, IMicrosoftTokenService tokenService)
+    public MicrosoftGraphService(HttpClient httpClient, IMicrosoftTokenService tokenService)
     {
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = httpClient;
         _tokenService = tokenService;
     }
 

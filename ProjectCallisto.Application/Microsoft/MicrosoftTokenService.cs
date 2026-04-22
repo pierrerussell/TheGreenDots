@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using ProjectCallisto.API.Configuration;
-using ProjectCallisto.Domain.Organisations;
-using ProjectCallisto.EfCore;
 
-namespace ProjectCallisto.API.Services;
+using Microsoft.Extensions.Options;
+
+using ProjectCallisto.Domain.Organisations;
+
+
+namespace ProjectCallisto.Application.Microsoft;
 
 public interface IMicrosoftTokenService
 {
@@ -16,23 +16,25 @@ public interface IMicrosoftTokenService
 
 public class MicrosoftTokenService : IMicrosoftTokenService
 {
-    private readonly AppDbContext _dbContext;
     private readonly HttpClient _httpClient;
     private readonly MicrosoftGraphOptions _options;
+    private readonly IMicrosoftConnectionRepository _microsoftConnectionRepository;
 
     public MicrosoftTokenService(
-        AppDbContext dbContext,
-        IHttpClientFactory httpClientFactory,
-        IOptions<MicrosoftGraphOptions> options)
+        HttpClient httpClient,
+        IOptions<MicrosoftGraphOptions> options,
+        IMicrosoftConnectionRepository microsoftConnectionRepository
+        )
     {
-        _dbContext = dbContext;
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = httpClient;
         _options = options.Value;
+        _microsoftConnectionRepository = microsoftConnectionRepository;
     }
 
     public async Task<MicrosoftConnection?> GetValidConnectionAsync(Guid connectionId, CancellationToken ct = default)
     {
-        var connection = await _dbContext.MicrosoftConnections.FindAsync([connectionId], ct);
+
+        var connection = await _microsoftConnectionRepository.FindAsync(connectionId, ct); // await _dbContext.MicrosoftConnections.FindAsync([connectionId], ct);
         if (connection == null) return null;
 
         // Refresh if expiring within 5 minutes
@@ -75,7 +77,7 @@ public class MicrosoftTokenService : IMicrosoftTokenService
         connection.RefreshToken = token.RefreshToken;
         connection.ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(token.ExpiresIn);
 
-        await _dbContext.SaveChangesAsync(ct);
+        await _microsoftConnectionRepository.SaveChangesAsync(ct);
 
         return connection;
     }

@@ -18,6 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\ProjectCallisto.Application\ProjectCallisto.Application.csproj" />
       <ProjectReference Include="..\ProjectCallisto.EfCore\ProjectCallisto.EfCore.csproj" />
     </ItemGroup>
 
@@ -42,6 +43,10 @@
       <_ContentIncludedByDefault Remove="wwwroot\browser\main-IIXZLFM4.js" />
       <_ContentIncludedByDefault Remove="wwwroot\browser\styles-2XHNXU5X.css" />
       <_ContentIncludedByDefault Remove="wwwroot\prerendered-routes.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Configuration\" />
     </ItemGroup>
 
     <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">

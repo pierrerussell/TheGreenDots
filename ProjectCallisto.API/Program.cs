@@ -5,10 +5,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using ProjectCallisto.API.Authorization;
 using ProjectCallisto.API.BackgroundServices;
-using ProjectCallisto.API.Configuration;
+
 using ProjectCallisto.API.Services;
+using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
+using ProjectCallisto.EfCore.Microsoft;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>                                                                                                                                                                                           
@@ -30,6 +32,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IOrganisationOnboardingService, OrganisationOnboardingService>();
 builder.Services.AddScoped<IMicrosoftTokenService, MicrosoftTokenService>();
 builder.Services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
+builder.Services.AddScoped<IMicrosoftConnectionRepository, MicrosoftConnectionRepository>();
+
 builder.Services.AddHostedService<PresencePollingService>();
 
 // Required for authorization handler to access route parameters

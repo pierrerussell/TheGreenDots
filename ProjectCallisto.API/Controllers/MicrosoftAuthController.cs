@@ -2,8 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using ProjectCallisto.API.Configuration;
+
 using ProjectCallisto.API.Services;
+using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.EfCore;
 
 namespace ProjectCallisto.API.Controllers;

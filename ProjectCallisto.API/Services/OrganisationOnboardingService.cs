@@ -2,7 +2,8 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
-using ProjectCallisto.API.Configuration;
+
+using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.Domain.Users;
 using ProjectCallisto.EfCore;

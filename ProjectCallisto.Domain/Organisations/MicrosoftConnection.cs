@@ -15,3 +15,10 @@ public class MicrosoftConnection
 
 
 }
+
+public interface IMicrosoftConnectionRepository 
+{
+    Task<MicrosoftConnection?> FindAsync(Guid guid, CancellationToken ct = default(CancellationToken));
+    
+    Task SaveChangesAsync(CancellationToken ct = default(CancellationToken));
+}
