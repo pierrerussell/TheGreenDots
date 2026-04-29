@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProjectCallisto.Application.Emails;
 using Resend;
 using EmailMessage = Resend.EmailMessage;
@@ -10,10 +11,10 @@ namespace ProjectCallisto.Resend;
 public class ResendEmailService : IEmailService
 {
     private readonly IResend _resend;
-    private readonly ResendOptions _options;
+    private readonly IOptions<ResendOptions> _options;
     private readonly ILogger<ResendEmailService> _logger;
     
-    public ResendEmailService(IResend resend, ResendOptions options, ILogger<ResendEmailService> logger)
+    public ResendEmailService(IResend resend, IOptions<ResendOptions> options, ILogger<ResendEmailService> logger)
     {
         _resend = resend;
         _options = options;
@@ -27,7 +28,7 @@ public class ResendEmailService : IEmailService
         {
             var message = new EmailMessage
             {
-                From = _options.FromEmail,
+                From = _options.Value.FromEmail,
                 To = to,
                 Subject = "",
                 Template = new EmailMessageTemplate()

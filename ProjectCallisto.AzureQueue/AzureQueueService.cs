@@ -1,7 +1,10 @@
 using System.Text;
 using System.Text.Json;
+using Azure.Identity;
 using Azure.Storage.Queues;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Queues;
 
 namespace ProjectCallisto.AzureQueue;
@@ -11,10 +14,20 @@ public class AzureQueueService<T> : IQueueService<T> where T : class
     private readonly QueueClient _queueClient;
     private readonly ILogger<AzureQueueService<T>> _logger;
     
-    public AzureQueueService(QueueClient queueClient, ILogger<AzureQueueService<T>> logger)
+    public AzureQueueService(IOptions<AzureQueueOptions> options, ILogger<AzureQueueService<T>> logger)
     {
-        _queueClient = queueClient;
         _logger = logger;
+
+        // Determine queue name based on message type
+        var queueName = typeof(T).Name switch
+        {
+            nameof(EmailMessage) => options.Value.EmailQueueName,
+            _ => throw new InvalidOperationException($"No queue configured for type {typeof(T).Name}")
+        };
+
+        // Use DefaultAzureCredential (works locally with az login and in Azure with Managed Identity)
+        var queueUri = new Uri($"https://{options.Value.StorageAccountName}.queue.core.windows.net/{queueName}");
+        _queueClient = new QueueClient(queueUri, new DefaultAzureCredential());
     }
     
     public async Task EnqueueAsync(T message)

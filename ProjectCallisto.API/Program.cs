@@ -7,7 +7,10 @@ using ProjectCallisto.API.Authorization;
 
 
 using ProjectCallisto.API.Services;
+using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Microsoft;
+using ProjectCallisto.Application.Queues;
+using ProjectCallisto.AzureQueue;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
 using ProjectCallisto.EfCore.Microsoft;
@@ -87,6 +90,10 @@ builder.Services.AddAuthorization(options =>
 
 // Register authorization handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+
+// Azure Queue
+builder.Services.Configure<AzureQueueOptions>(builder.Configuration.GetSection("AzureQueue"));
+builder.Services.AddScoped<IQueueService<EmailMessage>, AzureQueueService<EmailMessage>>();
 
 var app = builder.Build();
 var browserPath = Path.Combine(app.Environment.WebRootPath, "browser");

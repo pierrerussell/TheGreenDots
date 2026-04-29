@@ -19,6 +19,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ProjectCallisto.Application\ProjectCallisto.Application.csproj" />
+      <ProjectReference Include="..\ProjectCallisto.AzureQueue\ProjectCallisto.AzureQueue.csproj" />
       <ProjectReference Include="..\ProjectCallisto.EfCore\ProjectCallisto.EfCore.csproj" />
     </ItemGroup>
 

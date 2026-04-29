@@ -48,12 +48,8 @@ var host = new HostBuilder()
         services.AddScoped<IMicrosoftConnectionRepository, MicrosoftConnectionRepository>();
         
         services.Configure<ResendOptions>(context.Configuration.GetSection("Resend"));
-        var resendApiKey = context.Configuration["Resend:ResendApiKey"];
-        services.AddHttpClient<IResend, ResendClient>(client =>
-        {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {resendApiKey}");
-            client.BaseAddress = new Uri("https://api.resend.com/"); // Resend API base URL
-        });
+        var resendApiKey = context.Configuration["Resend:ApiKey"];
+        services.AddSingleton<IResend>(sp => ResendClient.Create(resendApiKey));
 
         services.AddScoped<IEmailService, ResendEmailService>();
         

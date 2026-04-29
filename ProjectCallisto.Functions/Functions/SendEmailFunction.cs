@@ -19,7 +19,7 @@ public class SendEmailFunction
 
     [Function("SendEmail")]
     public async Task Run(
-        [QueueTrigger("email-queue", Connection = "AzureQueue:ConnectionString")]
+        [QueueTrigger("email-queue", Connection = "AzureQueue")]
         QueueMessage message
     )
     {
