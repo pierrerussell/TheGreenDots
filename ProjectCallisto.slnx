@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/Infrastructure/">
+    <Project Path="ProjectCallisto.AzureQueue/ProjectCallisto.AzureQueue.csproj" />
+    <Project Path="ProjectCallisto.EfCore/ProjectCallisto.EfCore.csproj" />
+    <Project Path="ProjectCallisto.Resend/ProjectCallisto.Resend.csproj" />
+  </Folder>
   <Project Path="ProjectCallisto.API/ProjectCallisto.API.csproj" />
   <Project Path="ProjectCallisto.Application/ProjectCallisto.Application.csproj" />
   <Project Path="projectcallisto.client/projectcallisto.client.esproj">
@@ -6,6 +11,5 @@
     <Build />
   </Project>
   <Project Path="ProjectCallisto.Domain/ProjectCallisto.Domain.csproj" />
-  <Project Path="ProjectCallisto.EfCore/ProjectCallisto.EfCore.csproj" />
   <Project Path="ProjectCallisto.Functions/ProjectCallisto.Functions.csproj" />
 </Solution>

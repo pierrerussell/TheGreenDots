@@ -14,13 +14,16 @@
         <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.51.0"/>
         <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="2.50.0"/>
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.0"/>
+        <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.5.4" />
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7"/>
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\ProjectCallisto.Application\ProjectCallisto.Application.csproj" />
+      <ProjectReference Include="..\ProjectCallisto.AzureQueue\ProjectCallisto.AzureQueue.csproj" />
       <ProjectReference Include="..\ProjectCallisto.EfCore\ProjectCallisto.EfCore.csproj" />
+      <ProjectReference Include="..\ProjectCallisto.Resend\ProjectCallisto.Resend.csproj" />
     </ItemGroup>
 
 </Project>
