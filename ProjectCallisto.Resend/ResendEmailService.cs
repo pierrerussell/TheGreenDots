@@ -42,14 +42,14 @@ public class ResendEmailService : IEmailService
                 using var memoryStream = new MemoryStream();
                 await csvAttachment.CopyToAsync(memoryStream);
 
-                message.Attachments = new List<EmailAttachment>();
+                message.Attachments = new List<EmailAttachment>()
                 {
                     new EmailAttachment()
                     {
                         Content = memoryStream.ToArray(),
                         ContentType = "text/csv",
                         Filename = csvFileName
-                    };
+                    }
                 };
             }
 

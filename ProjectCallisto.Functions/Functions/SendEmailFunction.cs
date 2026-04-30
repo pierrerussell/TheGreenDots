@@ -28,6 +28,14 @@ public class SendEmailFunction
         {
             var emailMessage = JsonSerializer.Deserialize<EmailMessage>(message.MessageText);
             if (emailMessage == null)
+                throw new InvalidOperationException("Deserialization failed");
+
+            if (!Guid.TryParse(emailMessage.TemplateId, out _))
+                throw new ArgumentException($"Invalid template ID: {emailMessage.TemplateId}");
+
+            if (string.IsNullOrEmpty(emailMessage.To) || !emailMessage.To.Contains("@"))
+                throw new ArgumentException($"Invalid email address: {emailMessage.To}");
+            if (emailMessage == null)
             {
                 _logger.LogError("Failed to deserialize message");
                 return;
