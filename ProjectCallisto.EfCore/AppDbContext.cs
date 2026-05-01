@@ -13,6 +13,9 @@ public class AppDbContext : DbContext
     public DbSet<MicrosoftConnection> MicrosoftConnections { get; set; }
     public DbSet<TenantMember> TenantMembers { get; set; }
     public DbSet<PresenceHistory> PresenceHistories { get; set; }
+    public DbSet<WorkingHours> WorkingHours { get; set; }
+    public DbSet<EmailReportSettings> EmailReportSettings { get; set; }
+    public DbSet<EmailRecipient> EmailRecipients { get; set; }
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {}
 
@@ -44,6 +47,27 @@ public class AppDbContext : DbContext
                     .WithMany()
                     .HasForeignKey(x => x.ActiveConnectionId);
                 builder.Navigation(o => o.Subscription).AutoInclude();
+
+                // Timezone & Country
+                builder.Property(x => x.Country)
+                    .HasMaxLength(2); // ISO 3166-2 (2 chars)
+                builder.Property(x => x.CountryDetectedFrom)
+                    .HasMaxLength(50);
+                builder.Property(x => x.Timezone)
+                    .HasMaxLength(100); // IANA timezones can be long
+                builder.Property(x => x.TimezoneDetectedFrom)
+                    .HasMaxLength(50);
+
+                // One-to-one relationships
+                builder.HasOne(o => o.WorkingHours)
+                    .WithOne(wh => wh.Organisation)
+                    .HasForeignKey<WorkingHours>(wh => wh.OrganisationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                builder.HasOne(o => o.EmailReportSettings)
+                    .WithOne(ers => ers.Organisation)
+                    .HasForeignKey<EmailReportSettings>(ers => ers.OrganisationId)
+                    .OnDelete(DeleteBehavior.Cascade);
             }
         );
 
@@ -123,6 +147,54 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.TenantMemberId);
             // Index for querying a member's history chronologically
             builder.HasIndex(x => new { x.TenantMemberId, x.RecordedAt });
+        });
+
+        modelBuilder.Entity<WorkingHours>(builder =>
+        {
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.StartTime)
+                .IsRequired();
+            builder.Property(x => x.EndTime)
+                .IsRequired();
+            builder.Property(x => x.WorkingDays)
+                .HasConversion<int>() // Store as int in DB
+                .IsRequired();
+            builder.HasIndex(x => x.OrganisationId)
+                .IsUnique(); // One-to-one constraint
+        });
+
+        modelBuilder.Entity<EmailReportSettings>(builder =>
+        {
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.IsEnabled)
+                .IsRequired();
+            builder.Property(x => x.Frequency)
+                .HasConversion<int>()
+                .IsRequired();
+            builder.Property(x => x.TimeOfDay)
+                .IsRequired();
+            builder.HasIndex(x => x.OrganisationId)
+                .IsUnique();
+            // For efficient querying of enabled reports by frequency
+            builder.HasIndex(x => new { x.IsEnabled, x.Frequency, x.DayOfWeek });
+            // Navigation to recipients
+            builder.HasMany(ers => ers.Recipients)
+                .WithOne(r => r.EmailReportSettings)
+                .HasForeignKey(r => r.EmailReportSettingsId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailRecipient>(builder =>
+        {
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.Email)
+                .HasMaxLength(256)
+                .IsRequired();
+            builder.Property(x => x.Name)
+                .HasMaxLength(256);
+            // Prevent duplicate emails per settings
+            builder.HasIndex(x => new { x.EmailReportSettingsId, x.Email })
+                .IsUnique();
         });
 
     }

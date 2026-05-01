@@ -25,5 +25,14 @@ public class Organisation
     public string? StripeCustomerId  { get;  set; }
     public DateTimeOffset CreatedAt { get;  set; }
 
+    // Timezone & Country
+    public string? Country { get; set; } // ISO 3166-2 format (e.g., "SG", "US")
+    public string? CountryDetectedFrom { get; set; } // "Microsoft" or "Manual"
+    public string? Timezone { get; set; } // IANA timezone (e.g., "Asia/Singapore")
+    public string? TimezoneDetectedFrom { get; set; } // "Country" or "Manual"
+
+    // Navigation properties
     public Subscription Subscription { get; set; } = null!;
+    public WorkingHours? WorkingHours { get; set; }
+    public EmailReportSettings? EmailReportSettings { get; set; }
 }
