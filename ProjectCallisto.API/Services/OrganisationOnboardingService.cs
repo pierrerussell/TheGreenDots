@@ -52,10 +52,10 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
     {
         var token = await ExchangeCodeForTokenAsync(authCode);
         var tenantId = ExtractTenantIdFromToken(token.AccessToken);
-        var orgName = await FetchOrganisationNameAsync(token.AccessToken);
+        var (orgName, country) = await FetchOrganisationDetailsAsync(token.AccessToken);
 
         var connection = await CreateMicrosoftConnectionAsync(user.Id, tenantId, token);
-        var organisation = await CreateOrganisationAsync(orgName, tenantId, connection.Id);
+        var organisation = await CreateOrganisationAsync(orgName, tenantId, connection.Id, country);
         await CreateOrganisationUserAsync(organisation.Id, user.Id, OrganisationRole.Admin);
 
         // Fetch and store tenant members
@@ -124,12 +124,14 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
                ?? throw new InvalidOperationException("Tenant ID not found in token");
     }
 
-    private async Task<string> FetchOrganisationNameAsync(string accessToken)
+    private async Task<(string Name, string? Country)> FetchOrganisationDetailsAsync(string accessToken)
     {
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", accessToken);
 
-        var response = await _httpClient.GetAsync("https://graph.microsoft.com/v1.0/organization");
+        // Request both displayName and countryLetterCode
+        var response = await _httpClient.GetAsync(
+            "https://graph.microsoft.com/v1.0/organization?$select=displayName,countryLetterCode");
         var orgJson = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
@@ -138,8 +140,14 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
         }
 
         var orgData = JsonSerializer.Deserialize<JsonElement>(orgJson);
-        return orgData.GetProperty("value")[0].GetProperty("displayName").GetString()
-               ?? "Unknown Organisation";
+        var firstOrg = orgData.GetProperty("value")[0];
+
+        var name = firstOrg.GetProperty("displayName").GetString() ?? "Unknown Organisation";
+        var country = firstOrg.TryGetProperty("countryLetterCode", out var countryProp)
+            ? countryProp.GetString()
+            : null;
+
+        return (name, country);
     }
 
     private async Task<MicrosoftConnection> CreateMicrosoftConnectionAsync(
@@ -164,7 +172,8 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
     private async Task<Organisation> CreateOrganisationAsync(
         string name,
         string tenantId,
-        Guid activeConnectionId)
+        Guid activeConnectionId,
+        string? country)
     {
         var organisation = new Organisation(
             name: name,
@@ -172,8 +181,63 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
             connectionId: activeConnectionId,
             trialSeats: 999);
 
+        // Set country and derive timezone
+        if (!string.IsNullOrEmpty(country))
+        {
+            organisation.Country = country;
+            organisation.CountryDetectedFrom = "Microsoft";
+            organisation.Timezone = MapCountryToTimezone(country);
+            organisation.TimezoneDetectedFrom = "Country";
+        }
+
         await _dbContext.Organisations.AddAsync(organisation);
         return organisation;
+    }
+
+    private static string MapCountryToTimezone(string countryCode)
+    {
+        return countryCode.ToUpperInvariant() switch
+        {
+            "SG" => "Asia/Singapore",
+            "MY" => "Asia/Kuala_Lumpur",
+            "ID" => "Asia/Jakarta",
+            "US" => "America/New_York",
+            "GB" => "Europe/London",
+            "AU" => "Australia/Sydney",
+            "JP" => "Asia/Tokyo",
+            "DE" => "Europe/Berlin",
+            "FR" => "Europe/Paris",
+            "CA" => "America/Toronto",
+            "IN" => "Asia/Kolkata",
+            "CN" => "Asia/Shanghai",
+            "BR" => "America/Sao_Paulo",
+            "MX" => "America/Mexico_City",
+            "NL" => "Europe/Amsterdam",
+            "SE" => "Europe/Stockholm",
+            "NO" => "Europe/Oslo",
+            "DK" => "Europe/Copenhagen",
+            "FI" => "Europe/Helsinki",
+            "IT" => "Europe/Rome",
+            "ES" => "Europe/Madrid",
+            "PT" => "Europe/Lisbon",
+            "PL" => "Europe/Warsaw",
+            "CZ" => "Europe/Prague",
+            "AT" => "Europe/Vienna",
+            "CH" => "Europe/Zurich",
+            "BE" => "Europe/Brussels",
+            "IE" => "Europe/Dublin",
+            "NZ" => "Pacific/Auckland",
+            "ZA" => "Africa/Johannesburg",
+            "AE" => "Asia/Dubai",
+            "SA" => "Asia/Riyadh",
+            "KR" => "Asia/Seoul",
+            "TH" => "Asia/Bangkok",
+            "PH" => "Asia/Manila",
+            "VN" => "Asia/Ho_Chi_Minh",
+            "HK" => "Asia/Hong_Kong",
+            "TW" => "Asia/Taipei",
+            _ => "UTC" // Fallback
+        };
     }
 
     private async Task CreateOrganisationUserAsync(Guid organisationId, Guid userId, OrganisationRole role)

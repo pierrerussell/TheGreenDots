@@ -421,6 +421,58 @@ public class OrganisationsController : ControllerBase
         ));
     }
 
+    [HttpGet("{id:guid}/timezone")]
+    [Authorize(Policy = nameof(Permission.ViewDashboard))]
+    public async Task<IActionResult> GetTimezone(Guid id)
+    {
+        var org = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (org == null) return NotFound();
+
+        return Ok(new
+        {
+            country = org.Country,
+            countryDetectedFrom = org.CountryDetectedFrom,
+            timezone = org.Timezone,
+            timezoneDetectedFrom = org.TimezoneDetectedFrom
+        });
+    }
+
+    [HttpPut("{id:guid}/timezone")]
+    [Authorize(Policy = nameof(Permission.ManageSettings))]
+    public async Task<IActionResult> UpdateTimezone(
+        Guid id,
+        [FromBody] UpdateTimezoneRequest request)
+    {
+        var org = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (org == null) return NotFound();
+
+        // Validate IANA timezone
+        try
+        {
+            TimeZoneInfo.FindSystemTimeZoneById(request.Timezone);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return BadRequest($"Invalid timezone: {request.Timezone}");
+        }
+
+        org.Timezone = request.Timezone;
+        org.TimezoneDetectedFrom = "Manual"; // User override
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            country = org.Country,
+            timezone = org.Timezone,
+            timezoneDetectedFrom = org.TimezoneDetectedFrom
+        });
+    }
+
     private async Task<User?> GetCurrentUserAsync()
     {
         var subjectId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
@@ -428,6 +480,8 @@ public class OrganisationsController : ControllerBase
         return await _dbContext.Users.FirstOrDefaultAsync(u => u.SubjectId == subjectId);
     }
 }
+
+public record UpdateTimezoneRequest(string Timezone);
 
 public record MemberResponse(
     Guid Id,

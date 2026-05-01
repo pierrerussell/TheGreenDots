@@ -12,4 +12,5 @@
   </Project>
   <Project Path="ProjectCallisto.Domain/ProjectCallisto.Domain.csproj" />
   <Project Path="ProjectCallisto.Functions/ProjectCallisto.Functions.csproj" />
+  <Project Path="ProjectCallisto.Tests/ProjectCallisto.Tests.csproj" />
 </Solution>
