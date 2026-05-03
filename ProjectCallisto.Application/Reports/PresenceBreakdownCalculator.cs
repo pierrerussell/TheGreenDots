@@ -117,13 +117,13 @@ public class PresenceBreakdownCalculator : IPresenceBreakdownCalculator
                 // Split into: current status segment + offline segment
 
                 // Add segment for current status (up to threshold)
-                var currentSegmentEnd = current.RecordedAt.AddHours(OFFLINE_GAP_THRESHOLD_HOURS / 2);
+                var currentSegmentEnd = current.RecordedAt.AddHours(OFFLINE_GAP_THRESHOLD_HOURS);
                 segments.Add(new TimeSegment
                 {
                     StartTime = current.RecordedAt,
                     EndTime = currentSegmentEnd,
                     Status = current.Availability,
-                    DurationHours = OFFLINE_GAP_THRESHOLD_HOURS / 2
+                    DurationHours = OFFLINE_GAP_THRESHOLD_HOURS
                 });
 
                 // Add offline segment for the gap
