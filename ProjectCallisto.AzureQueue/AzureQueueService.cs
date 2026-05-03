@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Queues;
 using ProjectCallisto.Application.Reports;
+using ProjectCallisto.Application.Reports.Models;
 
 namespace ProjectCallisto.AzureQueue;
 

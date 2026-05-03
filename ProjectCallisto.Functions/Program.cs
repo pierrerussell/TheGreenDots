@@ -8,6 +8,7 @@ using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Application.Queues;
 using ProjectCallisto.Application.Reports;
+using ProjectCallisto.Application.Reports.Models;
 using ProjectCallisto.AzureQueue;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
@@ -57,6 +58,11 @@ var host = new HostBuilder()
         services.Configure<AzureQueueOptions>(context.Configuration.GetSection("AzureQueue"));
         services.AddScoped<IQueueService<EmailMessage>, AzureQueueService<EmailMessage>>();
         services.AddScoped<IQueueService<ReportCalculationJob>, AzureQueueService<ReportCalculationJob>>();
+
+        // Report calculation services
+        services.AddScoped<IReportCalculationService, ReportCalculationService>();
+        services.AddScoped<IPresenceBreakdownCalculator, PresenceBreakdownCalculator>();
+        services.AddScoped<IInsightDetectionService, InsightDetectionService>();
     })
     .Build();
 
