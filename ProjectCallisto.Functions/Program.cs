@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Application.Queues;
+using ProjectCallisto.Application.Reports;
 using ProjectCallisto.AzureQueue;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
@@ -55,6 +56,7 @@ var host = new HostBuilder()
         
         services.Configure<AzureQueueOptions>(context.Configuration.GetSection("AzureQueue"));
         services.AddScoped<IQueueService<EmailMessage>, AzureQueueService<EmailMessage>>();
+        services.AddScoped<IQueueService<ReportCalculationJob>, AzureQueueService<ReportCalculationJob>>();
     })
     .Build();
 

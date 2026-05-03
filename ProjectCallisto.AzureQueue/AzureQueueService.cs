@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Queues;
+using ProjectCallisto.Application.Reports;
 
 namespace ProjectCallisto.AzureQueue;
 
@@ -22,6 +23,7 @@ public class AzureQueueService<T> : IQueueService<T> where T : class
         var queueName = typeof(T).Name switch
         {
             nameof(EmailMessage) => options.Value.EmailQueueName,
+            nameof(ReportCalculationJob) => options.Value.ReportCalculationQueueName, // ADD
             _ => throw new InvalidOperationException($"No queue configured for type {typeof(T).Name}")
         };
 
