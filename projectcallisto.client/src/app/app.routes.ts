@@ -54,6 +54,12 @@ export const routes: Routes = [
           import('./pages/organisation/subscription/subscription.component').then(m => m.SubscriptionComponent),
         canActivate: [adminGuard],
       },
+      {
+        path: 'email-reports',
+        loadComponent: () =>
+          import('./pages/organisation/reports/email-report-settings.component').then(m => m.EmailReportSettingsComponent),
+        canActivate: [adminGuard],
+      },
     ],
   },
   {

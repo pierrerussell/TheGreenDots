@@ -82,6 +82,17 @@ import { OrganisationService } from './organisation.service';
             </a>
 
             <a
+              [routerLink]="['/organisation', orgId, 'email-reports']"
+              routerLinkActive="bg-green-50 text-green-700 border-green-200"
+              class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg border border-transparent text-surface-600 hover:bg-surface-50 hover:text-surface-900 transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+              </svg>
+              Email Reports
+            </a>
+
+            <a
               [routerLink]="['/organisation', orgId, 'subscription']"
               routerLinkActive="bg-green-50 text-green-700 border-green-200"
               class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg border border-transparent text-surface-600 hover:bg-surface-50 hover:text-surface-900 transition-colors"

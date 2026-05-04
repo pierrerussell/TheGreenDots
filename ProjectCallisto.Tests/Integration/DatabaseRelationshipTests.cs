@@ -26,26 +26,7 @@ public class DatabaseRelationshipTests : IntegrationTestBase
         loadedOrg.WorkingHours!.Id.Should().Be(workingHours.Id);
         loadedOrg.WorkingHours.OrganisationId.Should().Be(organisation.Id);
     }
-
-    [Fact]
-    public async Task Organisation_EmailReportSettings_OneToOneRelationship()
-    {
-        // Arrange
-        var organisation = await CreateTestOrganisationAsync();
-        var settings = new EmailReportSettings(organisation.Id);
-        await DbContext.EmailReportSettings.AddAsync(settings);
-        await DbContext.SaveChangesAsync();
-
-        // Act
-        var loadedOrg = await DbContext.Organisations
-            .Include(o => o.EmailReportSettings)
-            .FirstAsync(o => o.Id == organisation.Id);
-
-        // Assert
-        loadedOrg.EmailReportSettings.Should().NotBeNull();
-        loadedOrg.EmailReportSettings!.Id.Should().Be(settings.Id);
-        loadedOrg.EmailReportSettings.OrganisationId.Should().Be(organisation.Id);
-    }
+    
 
     [Fact]
     public async Task EmailReportSettings_EmailRecipients_OneToManyRelationship()

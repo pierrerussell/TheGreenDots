@@ -57,9 +57,17 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
             return;
         }
 
-        // Get organisation ID from route parameter
+        // Get organisation ID from route parameter (support both "id" and "orgId")
+        // IMPORTANT: This assumes ANY "id" or "orgId" route parameter is the organisation ID.
+        // To avoid authorization bugs:
+        // - NEVER use "id" or "orgId" for non-organisation resources in protected routes
+        // - NEVER have routes with BOTH "id" and "orgId" parameters
+        // - Use specific names like "userId", "resourceId", "settingId" for other IDs
+        // TODO: Consider more robust solution - maybe require controllers to specify
+        // which route parameter contains the org ID via a custom attribute
         var httpContext = _httpContextAccessor.HttpContext;
-        var orgIdValue = httpContext?.GetRouteValue("id")?.ToString();
+        var orgIdValue = httpContext?.GetRouteValue("orgId")?.ToString()
+                      ?? httpContext?.GetRouteValue("id")?.ToString();
         if (orgIdValue == null || !Guid.TryParse(orgIdValue, out var orgId))
         {
             context.Fail();

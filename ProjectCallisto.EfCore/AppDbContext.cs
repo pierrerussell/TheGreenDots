@@ -64,9 +64,10 @@ public class AppDbContext : DbContext
                     .HasForeignKey<WorkingHours>(wh => wh.OrganisationId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                builder.HasOne(o => o.EmailReportSettings)
+                // One-to-many relationship for EmailReportSettings
+                builder.HasMany(o => o.EmailReportSettings)
                     .WithOne(ers => ers.Organisation)
-                    .HasForeignKey<EmailReportSettings>(ers => ers.OrganisationId)
+                    .HasForeignKey(ers => ers.OrganisationId)
                     .OnDelete(DeleteBehavior.Cascade);
             }
         );
@@ -173,8 +174,8 @@ public class AppDbContext : DbContext
                 .IsRequired();
             builder.Property(x => x.TimeOfDay)
                 .IsRequired();
-            builder.HasIndex(x => x.OrganisationId)
-                .IsUnique();
+            // Non-unique index for query performance (organisation can have multiple settings)
+            builder.HasIndex(x => x.OrganisationId);
             // For efficient querying of enabled reports by frequency
             builder.HasIndex(x => new { x.IsEnabled, x.Frequency, x.DayOfWeek });
             // Navigation to recipients

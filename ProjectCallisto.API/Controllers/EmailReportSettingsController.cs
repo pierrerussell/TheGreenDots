@@ -25,30 +25,102 @@ public class EmailReportSettingsController : ControllerBase
     {
         var settings = await _dbContext.EmailReportSettings
             .Include(s => s.Recipients)
-            .FirstOrDefaultAsync(s => s.OrganisationId == orgId);
+            .Where(s => s.OrganisationId == orgId)
+            .ToListAsync();
 
-        if (settings == null)
-        {
-            // Return defaults
-            return Ok(new EmailReportSettingsResponse(
-                null,
-                false,
-                "weekly",
-                "monday",
-                1,
-                new TimeOnly(9, 0),
-                Array.Empty<RecipientResponse>(),
-                null
-            ));
-        }
-
-        return Ok(EmailReportSettingsResponse.FromEntity(settings));
+        return Ok(settings.Select(EmailReportSettingsResponse.FromEntity).ToArray());
     }
 
-    [HttpPut]
+    [HttpPost("initialize")]
+    [Authorize(Policy = nameof(Permission.ManageSettings))]
+    public async Task<IActionResult> InitializeSettings(Guid orgId)
+    {
+        // Get existing settings
+        var existingSettings = await _dbContext.EmailReportSettings
+            .Include(s => s.Recipients)
+            .Where(s => s.OrganisationId == orgId)
+            .ToListAsync();
+
+        var existingFrequencies = existingSettings.Select(s => s.Frequency).ToHashSet();
+
+        // Create missing settings with defaults (disabled)
+        var allFrequencies = new[] { ReportFrequency.Daily, ReportFrequency.Weekly, ReportFrequency.Monthly };
+
+        foreach (var frequency in allFrequencies)
+        {
+            if (!existingFrequencies.Contains(frequency))
+            {
+                var newSetting = new EmailReportSettings(orgId)
+                {
+                    IsEnabled = false,
+                    Frequency = frequency,
+                    TimeOfDay = new TimeOnly(9, 0)
+                };
+
+                // Set frequency-specific defaults
+                if (frequency == ReportFrequency.Weekly)
+                {
+                    newSetting.DayOfWeek = DayOfWeek.Monday;
+                }
+                else if (frequency == ReportFrequency.Monthly)
+                {
+                    newSetting.DayOfMonth = 1;
+                }
+
+                await _dbContext.EmailReportSettings.AddAsync(newSetting);
+                existingSettings.Add(newSetting);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        // Return all settings (existing + newly created)
+        return Ok(existingSettings.Select(EmailReportSettingsResponse.FromEntity).ToArray());
+    }
+
+    [HttpPost]
+    [Authorize(Policy = nameof(Permission.ManageSettings))]
+    public async Task<IActionResult> CreateSettings(
+        Guid orgId,
+        [FromBody] CreateEmailReportSettingsRequest request)
+    {
+        // Validation
+        if (request.Frequency == "weekly" && request.DayOfWeek == null)
+            return BadRequest("DayOfWeek is required for weekly reports");
+
+        if (request.Frequency == "monthly" && request.DayOfMonth == null)
+            return BadRequest("DayOfMonth is required for monthly reports");
+
+        if (request.DayOfMonth.HasValue && (request.DayOfMonth < 1 || request.DayOfMonth > 28))
+            return BadRequest("DayOfMonth must be between 1 and 28");
+
+        var settings = new EmailReportSettings(orgId);
+
+        // Set properties
+        settings.IsEnabled = request.IsEnabled;
+        settings.Frequency = ParseFrequency(request.Frequency);
+        settings.DayOfWeek = !string.IsNullOrEmpty(request.DayOfWeek)
+            ? ParseDayOfWeek(request.DayOfWeek)
+            : null;
+        settings.DayOfMonth = request.DayOfMonth;
+        settings.TimeOfDay = request.TimeOfDay;
+
+        // Add recipients
+        settings.Recipients = request.Recipients
+            .Select(r => new EmailRecipient(settings.Id, r.Email, r.Name))
+            .ToList();
+
+        await _dbContext.EmailReportSettings.AddAsync(settings);
+        await _dbContext.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetSettings), new { orgId }, EmailReportSettingsResponse.FromEntity(settings));
+    }
+
+    [HttpPut("{settingId:guid}")]
     [Authorize(Policy = nameof(Permission.ManageSettings))]
     public async Task<IActionResult> UpdateSettings(
         Guid orgId,
+        Guid settingId,
         [FromBody] UpdateEmailReportSettingsRequest request)
     {
         // Validation
@@ -62,14 +134,10 @@ public class EmailReportSettingsController : ControllerBase
             return BadRequest("DayOfMonth must be between 1 and 28");
 
         var settings = await _dbContext.EmailReportSettings
-            .Include(s => s.Recipients)
-            .FirstOrDefaultAsync(s => s.OrganisationId == orgId);
+            .FirstOrDefaultAsync(s => s.Id == settingId && s.OrganisationId == orgId);
 
         if (settings == null)
-        {
-            settings = new EmailReportSettings(orgId);
-            await _dbContext.EmailReportSettings.AddAsync(settings);
-        }
+            return NotFound();
 
         // Update settings
         settings.IsEnabled = request.IsEnabled;
@@ -81,15 +149,39 @@ public class EmailReportSettingsController : ControllerBase
         settings.TimeOfDay = request.TimeOfDay;
         settings.UpdatedAt = DateTimeOffset.UtcNow;
 
-        // Update recipients (simple replace strategy)
-        _dbContext.EmailRecipients.RemoveRange(settings.Recipients);
-        settings.Recipients = request.Recipients
+        // Delete all existing recipients for this setting (separate query to avoid tracking issues)
+        var existingRecipients = await _dbContext.EmailRecipients
+            .Where(r => r.EmailReportSettingsId == settingId)
+            .ToListAsync();
+
+        _dbContext.EmailRecipients.RemoveRange(existingRecipients);
+        await _dbContext.SaveChangesAsync(); // Save deletion first
+
+        // Add new recipients
+        var newRecipients = request.Recipients
             .Select(r => new EmailRecipient(settings.Id, r.Email, r.Name))
             .ToList();
 
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.EmailRecipients.AddRangeAsync(newRecipients);
+        await _dbContext.SaveChangesAsync(); // Save addition second
 
         return Ok(EmailReportSettingsResponse.FromEntity(settings));
+    }
+
+    [HttpDelete("{settingId:guid}")]
+    [Authorize(Policy = nameof(Permission.ManageSettings))]
+    public async Task<IActionResult> DeleteSettings(Guid orgId, Guid settingId)
+    {
+        var settings = await _dbContext.EmailReportSettings
+            .FirstOrDefaultAsync(s => s.Id == settingId && s.OrganisationId == orgId);
+
+        if (settings == null)
+            return NotFound();
+
+        _dbContext.EmailReportSettings.Remove(settings);
+        await _dbContext.SaveChangesAsync();
+
+        return NoContent();
     }
 
     private static ReportFrequency ParseFrequency(string frequency) => frequency.ToLowerInvariant() switch
@@ -144,6 +236,15 @@ public record EmailReportSettingsResponse(
         );
     }
 }
+
+public record CreateEmailReportSettingsRequest(
+    bool IsEnabled,
+    string Frequency,
+    string? DayOfWeek,
+    int? DayOfMonth,
+    TimeOnly TimeOfDay,
+    RecipientRequest[] Recipients
+);
 
 public record UpdateEmailReportSettingsRequest(
     bool IsEnabled,

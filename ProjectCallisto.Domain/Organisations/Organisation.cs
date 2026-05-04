@@ -34,5 +34,5 @@ public class Organisation
     // Navigation properties
     public Subscription Subscription { get; set; } = null!;
     public WorkingHours? WorkingHours { get; set; }
-    public EmailReportSettings? EmailReportSettings { get; set; }
+    public List<EmailReportSettings> EmailReportSettings { get; set; } = new();
 }

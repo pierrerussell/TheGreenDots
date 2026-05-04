@@ -17,7 +17,7 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WhenNotConfigured_ReturnsDefaults()
+    public async Task GetSettings_WhenNotConfigured_ReturnsEmptyArray()
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
@@ -27,34 +27,135 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<EmailReportSettingsResponse>().Subject;
-
-        response.Id.Should().BeNull();
-        response.IsEnabled.Should().BeFalse();
-        response.Frequency.Should().Be("weekly");
-        response.DayOfWeek.Should().Be("monday");
-        response.DayOfMonth.Should().Be(1);
-        response.TimeOfDay.Should().Be(new TimeOnly(9, 0));
-        response.Recipients.Should().BeEmpty();
-        response.LastSentAt.Should().BeNull();
+        var response = okResult.Value.Should().BeAssignableTo<IEnumerable<EmailReportSettingsResponse>>().Subject;
+        response.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task GetSettings_WhenConfigured_ReturnsExistingSettings()
+    public async Task InitializeSettings_CreatesAllThreeFrequenciesWithDefaults()
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
-        var settings = new EmailReportSettings(organisation.Id)
+
+        // Act
+        var result = await _controller.InitializeSettings(organisation.Id);
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeAssignableTo<IEnumerable<EmailReportSettingsResponse>>().Subject.ToList();
+
+        response.Should().HaveCount(3);
+        response.Should().Contain(r => r.Frequency == "daily");
+        response.Should().Contain(r => r.Frequency == "weekly");
+        response.Should().Contain(r => r.Frequency == "monthly");
+
+        // All should be disabled by default
+        response.Should().OnlyContain(r => r.IsEnabled == false);
+
+        // Check defaults
+        var daily = response.First(r => r.Frequency == "daily");
+        daily.TimeOfDay.Should().Be(new TimeOnly(9, 0));
+
+        var weekly = response.First(r => r.Frequency == "weekly");
+        weekly.DayOfWeek.Should().Be("monday");
+        weekly.TimeOfDay.Should().Be(new TimeOnly(9, 0));
+
+        var monthly = response.First(r => r.Frequency == "monthly");
+        monthly.DayOfMonth.Should().Be(1);
+        monthly.TimeOfDay.Should().Be(new TimeOnly(9, 0));
+    }
+
+    [Fact]
+    public async Task InitializeSettings_WhenSomeExist_OnlyCreatesMissing()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+
+        // Create daily setting manually
+        var existingDaily = new EmailReportSettings(organisation.Id)
+        {
+            IsEnabled = true,
+            Frequency = ReportFrequency.Daily,
+            TimeOfDay = new TimeOnly(8, 0)
+        };
+        await DbContext.EmailReportSettings.AddAsync(existingDaily);
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.InitializeSettings(organisation.Id);
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeAssignableTo<IEnumerable<EmailReportSettingsResponse>>().Subject.ToList();
+
+        response.Should().HaveCount(3);
+
+        // Existing daily should be unchanged
+        var daily = response.First(r => r.Frequency == "daily");
+        daily.IsEnabled.Should().BeTrue();
+        daily.TimeOfDay.Should().Be(new TimeOnly(8, 0));
+
+        // New weekly and monthly should have defaults
+        var weekly = response.First(r => r.Frequency == "weekly");
+        weekly.IsEnabled.Should().BeFalse();
+        weekly.TimeOfDay.Should().Be(new TimeOnly(9, 0));
+
+        var monthly = response.First(r => r.Frequency == "monthly");
+        monthly.IsEnabled.Should().BeFalse();
+        monthly.TimeOfDay.Should().Be(new TimeOnly(9, 0));
+    }
+
+    [Fact]
+    public async Task InitializeSettings_WhenAllExist_ReturnsExisting()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+
+        var dailySettings = new EmailReportSettings(organisation.Id) { Frequency = ReportFrequency.Daily, TimeOfDay = new TimeOnly(9, 0) };
+        var weeklySettings = new EmailReportSettings(organisation.Id) { Frequency = ReportFrequency.Weekly, DayOfWeek = DayOfWeek.Monday, TimeOfDay = new TimeOnly(9, 0) };
+        var monthlySettings = new EmailReportSettings(organisation.Id) { Frequency = ReportFrequency.Monthly, DayOfMonth = 1, TimeOfDay = new TimeOnly(9, 0) };
+
+        await DbContext.EmailReportSettings.AddRangeAsync(dailySettings, weeklySettings, monthlySettings);
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.InitializeSettings(organisation.Id);
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeAssignableTo<IEnumerable<EmailReportSettingsResponse>>().Subject.ToList();
+
+        response.Should().HaveCount(3);
+
+        // No new settings should be created
+        var allSettings = await DbContext.EmailReportSettings.Where(s => s.OrganisationId == organisation.Id).ToListAsync();
+        allSettings.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task GetSettings_WithMultipleConfigurations_ReturnsAll()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+
+        var dailySettings = new EmailReportSettings(organisation.Id)
+        {
+            IsEnabled = true,
+            Frequency = ReportFrequency.Daily,
+            TimeOfDay = new TimeOnly(9, 0)
+        };
+        dailySettings.Recipients.Add(new EmailRecipient(dailySettings.Id, "daily@example.com", "Daily User"));
+
+        var weeklySettings = new EmailReportSettings(organisation.Id)
         {
             IsEnabled = true,
             Frequency = ReportFrequency.Weekly,
-            DayOfWeek = DayOfWeek.Wednesday,
-            TimeOfDay = new TimeOnly(10, 30)
+            DayOfWeek = DayOfWeek.Monday,
+            TimeOfDay = new TimeOnly(10, 0)
         };
-        settings.Recipients.Add(new EmailRecipient(settings.Id, "test@example.com", "Test User"));
-        settings.Recipients.Add(new EmailRecipient(settings.Id, "admin@example.com", "Admin"));
+        weeklySettings.Recipients.Add(new EmailRecipient(weeklySettings.Id, "weekly@example.com", "Weekly User"));
 
-        await DbContext.EmailReportSettings.AddAsync(settings);
+        await DbContext.EmailReportSettings.AddRangeAsync(dailySettings, weeklySettings);
         await DbContext.SaveChangesAsync();
 
         // Act
@@ -62,27 +163,21 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<EmailReportSettingsResponse>().Subject;
-
-        response.Id.Should().Be(settings.Id);
-        response.IsEnabled.Should().BeTrue();
-        response.Frequency.Should().Be("weekly");
-        response.DayOfWeek.Should().Be("wednesday");
-        response.TimeOfDay.Should().Be(new TimeOnly(10, 30));
-        response.Recipients.Should().HaveCount(2);
-        response.Recipients.Should().Contain(r => r.Email == "test@example.com");
-        response.Recipients.Should().Contain(r => r.Email == "admin@example.com");
+        var response = okResult.Value.Should().BeAssignableTo<IEnumerable<EmailReportSettingsResponse>>().Subject.ToList();
+        response.Should().HaveCount(2);
+        response.Should().Contain(r => r.Frequency == "daily");
+        response.Should().Contain(r => r.Frequency == "weekly");
     }
 
     [Fact]
-    public async Task UpdateSettings_WhenNotConfigured_CreatesNewSettings()
+    public async Task CreateSettings_CreatesNewDailySetting()
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
-        var request = new UpdateEmailReportSettingsRequest(
+        var request = new CreateEmailReportSettingsRequest(
             IsEnabled: true,
-            Frequency: "weekly",
-            DayOfWeek: "friday",
+            Frequency: "daily",
+            DayOfWeek: null,
             DayOfMonth: null,
             TimeOfDay: new TimeOnly(14, 0),
             Recipients: new[]
@@ -93,51 +188,166 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
         );
 
         // Act
-        var result = await _controller.UpdateSettings(organisation.Id, request);
+        var result = await _controller.CreateSettings(organisation.Id, request);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<EmailReportSettingsResponse>().Subject;
+        var createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        var response = createdResult.Value.Should().BeOfType<EmailReportSettingsResponse>().Subject;
 
         response.Id.Should().NotBeNull();
         response.IsEnabled.Should().BeTrue();
-        response.Frequency.Should().Be("weekly");
-        response.DayOfWeek.Should().Be("friday");
+        response.Frequency.Should().Be("daily");
         response.TimeOfDay.Should().Be(new TimeOnly(14, 0));
         response.Recipients.Should().HaveCount(2);
 
         // Verify in database
         var savedSettings = await DbContext.EmailReportSettings
             .Include(s => s.Recipients)
-            .FirstOrDefaultAsync(s => s.OrganisationId == organisation.Id);
-        savedSettings.Should().NotBeNull();
-        savedSettings!.Recipients.Should().HaveCount(2);
+            .Where(s => s.OrganisationId == organisation.Id)
+            .ToListAsync();
+        savedSettings.Should().HaveCount(1);
+        savedSettings[0].Recipients.Should().HaveCount(2);
     }
 
-    // NOTE: These tests are skipped because of InMemory database limitations with tracking and removing related entities.
-    // The controller code uses RemoveRange on settings.Recipients which causes issues with InMemory provider.
-    // These tests would pass with a real SQL Server database.
-    // The issue: When updating existing settings, the RemoveRange operation on an empty or untracked collection
-    // causes DbUpdateConcurrencyException in InMemory database.
-
-    // [Fact]
-    // public async Task UpdateSettings_WhenConfigured_UpdatesExistingSettings()
-    // {
-    //     // Would test: Updating existing EmailReportSettings with new frequency and recipients
-    // }
-
-    // [Fact]
-    // public async Task UpdateSettings_ReplacesRecipients_Correctly()
-    // {
-    //     // Would test: Replacing old recipients with new ones
-    // }
-
     [Fact]
-    public async Task UpdateSettings_WeeklyFrequency_WithoutDayOfWeek_ReturnsBadRequest()
+    public async Task CreateSettings_MultipleDifferentFrequencies_AllowedAndDistinct()
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
-        var request = new UpdateEmailReportSettingsRequest(
+
+        var dailyRequest = new CreateEmailReportSettingsRequest(
+            IsEnabled: true,
+            Frequency: "daily",
+            DayOfWeek: null,
+            DayOfMonth: null,
+            TimeOfDay: new TimeOnly(9, 0),
+            Recipients: Array.Empty<RecipientRequest>()
+        );
+
+        var weeklyRequest = new CreateEmailReportSettingsRequest(
+            IsEnabled: true,
+            Frequency: "weekly",
+            DayOfWeek: "monday",
+            DayOfMonth: null,
+            TimeOfDay: new TimeOnly(10, 0),
+            Recipients: Array.Empty<RecipientRequest>()
+        );
+
+        // Act
+        await _controller.CreateSettings(organisation.Id, dailyRequest);
+        await _controller.CreateSettings(organisation.Id, weeklyRequest);
+
+        // Assert
+        var savedSettings = await DbContext.EmailReportSettings
+            .Where(s => s.OrganisationId == organisation.Id)
+            .ToListAsync();
+
+        savedSettings.Should().HaveCount(2);
+        savedSettings.Should().Contain(s => s.Frequency == ReportFrequency.Daily);
+        savedSettings.Should().Contain(s => s.Frequency == ReportFrequency.Weekly);
+    }
+
+    // NOTE: This test is skipped because of InMemory database limitations with tracking and removing related entities.
+    // The controller code uses RemoveRange on settings.Recipients which causes issues with InMemory provider.
+    // This test would pass with a real SQL Server database.
+    // The issue: When updating existing settings, the RemoveRange operation causes DbUpdateConcurrencyException in InMemory database.
+
+    // [Fact]
+    // public async Task UpdateSettings_UpdatesExistingSettingCorrectly()
+    // {
+    //     // Would test: Updating existing EmailReportSettings with new recipients
+    // }
+
+    [Fact]
+    public async Task UpdateSettings_NonExistentSetting_ReturnsNotFound()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+        var nonExistentId = Guid.NewGuid();
+        var updateRequest = new UpdateEmailReportSettingsRequest(
+            IsEnabled: true,
+            Frequency: "daily",
+            DayOfWeek: null,
+            DayOfMonth: null,
+            TimeOfDay: new TimeOnly(9, 0),
+            Recipients: Array.Empty<RecipientRequest>()
+        );
+
+        // Act
+        var result = await _controller.UpdateSettings(organisation.Id, nonExistentId, updateRequest);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task DeleteSettings_RemovesSettingSuccessfully()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+        var settings = new EmailReportSettings(organisation.Id)
+        {
+            Frequency = ReportFrequency.Daily,
+            TimeOfDay = new TimeOnly(9, 0)
+        };
+        await DbContext.EmailReportSettings.AddAsync(settings);
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.DeleteSettings(organisation.Id, settings.Id);
+
+        // Assert
+        result.Should().BeOfType<NoContentResult>();
+
+        var deletedSettings = await DbContext.EmailReportSettings.FindAsync(settings.Id);
+        deletedSettings.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteSettings_NonExistentSetting_ReturnsNotFound()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+        var nonExistentId = Guid.NewGuid();
+
+        // Act
+        var result = await _controller.DeleteSettings(organisation.Id, nonExistentId);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task DeleteSettings_AlsoDeletesRecipients()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+        var settings = new EmailReportSettings(organisation.Id)
+        {
+            Frequency = ReportFrequency.Weekly,
+            DayOfWeek = DayOfWeek.Monday,
+            TimeOfDay = new TimeOnly(9, 0)
+        };
+        settings.Recipients.Add(new EmailRecipient(settings.Id, "test@example.com", "Test"));
+        await DbContext.EmailReportSettings.AddAsync(settings);
+        await DbContext.SaveChangesAsync();
+
+        var recipientId = settings.Recipients[0].Id;
+
+        // Act
+        await _controller.DeleteSettings(organisation.Id, settings.Id);
+
+        // Assert
+        var deletedRecipient = await DbContext.EmailRecipients.FindAsync(recipientId);
+        deletedRecipient.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateSettings_WeeklyFrequency_WithoutDayOfWeek_ReturnsBadRequest()
+    {
+        // Arrange
+        var organisation = await CreateTestOrganisationAsync();
+        var request = new CreateEmailReportSettingsRequest(
             IsEnabled: true,
             Frequency: "weekly",
             DayOfWeek: null,
@@ -147,7 +357,7 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
         );
 
         // Act
-        var result = await _controller.UpdateSettings(organisation.Id, request);
+        var result = await _controller.CreateSettings(organisation.Id, request);
 
         // Assert
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
@@ -155,11 +365,11 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task UpdateSettings_MonthlyFrequency_WithoutDayOfMonth_ReturnsBadRequest()
+    public async Task CreateSettings_MonthlyFrequency_WithoutDayOfMonth_ReturnsBadRequest()
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
-        var request = new UpdateEmailReportSettingsRequest(
+        var request = new CreateEmailReportSettingsRequest(
             IsEnabled: true,
             Frequency: "monthly",
             DayOfWeek: null,
@@ -169,7 +379,7 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
         );
 
         // Act
-        var result = await _controller.UpdateSettings(organisation.Id, request);
+        var result = await _controller.CreateSettings(organisation.Id, request);
 
         // Assert
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
@@ -182,11 +392,11 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
     [InlineData(29)]
     [InlineData(30)]
     [InlineData(31)]
-    public async Task UpdateSettings_DayOfMonth_OutOfRange_ReturnsBadRequest(int dayOfMonth)
+    public async Task CreateSettings_DayOfMonth_OutOfRange_ReturnsBadRequest(int dayOfMonth)
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
-        var request = new UpdateEmailReportSettingsRequest(
+        var request = new CreateEmailReportSettingsRequest(
             IsEnabled: true,
             Frequency: "monthly",
             DayOfWeek: null,
@@ -196,7 +406,7 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
         );
 
         // Act
-        var result = await _controller.UpdateSettings(organisation.Id, request);
+        var result = await _controller.CreateSettings(organisation.Id, request);
 
         // Assert
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
@@ -207,11 +417,11 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
     [InlineData(1)]
     [InlineData(15)]
     [InlineData(28)]
-    public async Task UpdateSettings_DayOfMonth_ValidRange_Succeeds(int dayOfMonth)
+    public async Task CreateSettings_DayOfMonth_ValidRange_Succeeds(int dayOfMonth)
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
-        var request = new UpdateEmailReportSettingsRequest(
+        var request = new CreateEmailReportSettingsRequest(
             IsEnabled: true,
             Frequency: "monthly",
             DayOfWeek: null,
@@ -221,18 +431,18 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
         );
 
         // Act
-        var result = await _controller.UpdateSettings(organisation.Id, request);
+        var result = await _controller.CreateSettings(organisation.Id, request);
 
         // Assert
-        result.Should().BeOfType<OkObjectResult>();
+        result.Should().BeOfType<CreatedAtActionResult>();
     }
 
     [Fact]
-    public async Task UpdateSettings_DailyFrequency_DoesNotRequireSpecialFields()
+    public async Task CreateSettings_DailyFrequency_DoesNotRequireSpecialFields()
     {
         // Arrange
         var organisation = await CreateTestOrganisationAsync();
-        var request = new UpdateEmailReportSettingsRequest(
+        var request = new CreateEmailReportSettingsRequest(
             IsEnabled: true,
             Frequency: "daily",
             DayOfWeek: null,
@@ -242,89 +452,11 @@ public class EmailReportSettingsControllerTests : IntegrationTestBase
         );
 
         // Act
-        var result = await _controller.UpdateSettings(organisation.Id, request);
+        var result = await _controller.CreateSettings(organisation.Id, request);
 
         // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<EmailReportSettingsResponse>().Subject;
+        var createdResult = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        var response = createdResult.Value.Should().BeOfType<EmailReportSettingsResponse>().Subject;
         response.Frequency.Should().Be("daily");
-    }
-
-    [Fact]
-    public async Task UpdateSettings_EmptyRecipients_Succeeds()
-    {
-        // Arrange
-        var organisation = await CreateTestOrganisationAsync();
-        var request = new UpdateEmailReportSettingsRequest(
-            IsEnabled: false,
-            Frequency: "weekly",
-            DayOfWeek: "monday",
-            DayOfMonth: null,
-            TimeOfDay: new TimeOnly(9, 0),
-            Recipients: Array.Empty<RecipientRequest>()
-        );
-
-        // Act
-        var result = await _controller.UpdateSettings(organisation.Id, request);
-
-        // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<EmailReportSettingsResponse>().Subject;
-        response.Recipients.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task UpdateSettings_UpdatedAtTimestamp_IsUpdated()
-    {
-        // Arrange
-        var organisation = await CreateTestOrganisationAsync();
-        var settings = new EmailReportSettings(organisation.Id);
-        await DbContext.EmailReportSettings.AddAsync(settings);
-        await DbContext.SaveChangesAsync();
-
-        var originalUpdatedAt = settings.UpdatedAt;
-        await Task.Delay(10);
-
-        var request = new UpdateEmailReportSettingsRequest(
-            IsEnabled: true,
-            Frequency: "weekly",
-            DayOfWeek: "monday",
-            DayOfMonth: null,
-            TimeOfDay: new TimeOnly(9, 0),
-            Recipients: Array.Empty<RecipientRequest>()
-        );
-
-        // Act
-        await _controller.UpdateSettings(organisation.Id, request);
-
-        // Assert
-        var updated = await DbContext.EmailReportSettings.FirstAsync(s => s.Id == settings.Id);
-        updated.UpdatedAt.Should().BeAfter(originalUpdatedAt);
-    }
-
-    [Fact]
-    public async Task UpdateSettings_OnlyOneSettingsPerOrganisation_IsEnforced()
-    {
-        // Arrange
-        var organisation = await CreateTestOrganisationAsync();
-        var settings = new EmailReportSettings(organisation.Id);
-        await DbContext.EmailReportSettings.AddAsync(settings);
-        await DbContext.SaveChangesAsync();
-
-        var request = new UpdateEmailReportSettingsRequest(
-            IsEnabled: true,
-            Frequency: "weekly",
-            DayOfWeek: "monday",
-            DayOfMonth: null,
-            TimeOfDay: new TimeOnly(9, 0),
-            Recipients: Array.Empty<RecipientRequest>()
-        );
-
-        // Act
-        await _controller.UpdateSettings(organisation.Id, request);
-
-        // Assert
-        var count = await DbContext.EmailReportSettings.CountAsync(s => s.OrganisationId == organisation.Id);
-        count.Should().Be(1);
     }
 }
