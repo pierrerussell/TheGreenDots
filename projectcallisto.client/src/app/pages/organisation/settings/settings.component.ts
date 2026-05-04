@@ -23,6 +23,13 @@ interface Subscription {
   createdAt: string;
 }
 
+interface WorkingHours {
+  id: string | null;
+  startTime: string; // "HH:mm:ss"
+  endTime: string; // "HH:mm:ss"
+  workingDays: string[]; // ["monday", "tuesday", etc.]
+}
+
 @Component({
   selector: 'app-settings',
   standalone: true,
@@ -48,8 +55,23 @@ export class SettingsComponent implements OnInit {
   loadingSeats = signal(true);
   togglingSeats = signal<Set<string>>(new Set());
 
+  // Working hours
+  workingHours = signal<WorkingHours | null>(null);
+  loadingWorkingHours = signal(true);
+  savingWorkingHours = signal(false);
+  workingDaysOptions = [
+    { value: 'monday', label: 'Monday' },
+    { value: 'tuesday', label: 'Tuesday' },
+    { value: 'wednesday', label: 'Wednesday' },
+    { value: 'thursday', label: 'Thursday' },
+    { value: 'friday', label: 'Friday' },
+    { value: 'saturday', label: 'Saturday' },
+    { value: 'sunday', label: 'Sunday' },
+  ];
+
   ngOnInit(): void {
     this.loadSeatManagement();
+    this.loadWorkingHours();
   }
 
   startEditingName(): void {
@@ -169,5 +191,99 @@ export class SettingsComponent implements OnInit {
         this.deleting.set(false);
       },
     });
+  }
+
+  async loadWorkingHours(): Promise<void> {
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    this.loadingWorkingHours.set(true);
+    try {
+      const wh = await this.http
+        .get<WorkingHours>(`/api/organisations/${org.id}/working-hours`)
+        .toPromise();
+      this.workingHours.set(wh || null);
+    } catch (err) {
+      console.error('Failed to load working hours', err);
+    } finally {
+      this.loadingWorkingHours.set(false);
+    }
+  }
+
+  async saveWorkingHours(): Promise<void> {
+    const org = this.orgService.organisation();
+    const wh = this.workingHours();
+    if (!org || !wh) return;
+
+    if (wh.workingDays.length === 0) {
+      alert('Please select at least one working day');
+      return;
+    }
+
+    this.savingWorkingHours.set(true);
+    try {
+      const payload = {
+        startTime: wh.startTime,
+        endTime: wh.endTime,
+        workingDays: wh.workingDays,
+      };
+
+      const updated = await this.http
+        .put<WorkingHours>(`/api/organisations/${org.id}/working-hours`, payload)
+        .toPromise();
+
+      this.workingHours.set(updated || null);
+    } catch (err) {
+      console.error('Failed to save working hours', err);
+      alert('Failed to save working hours');
+    } finally {
+      this.savingWorkingHours.set(false);
+    }
+  }
+
+  toggleWorkingDay(day: string): void {
+    const wh = this.workingHours();
+    if (!wh) return;
+
+    const days = new Set(wh.workingDays);
+    if (days.has(day)) {
+      days.delete(day);
+    } else {
+      days.add(day);
+    }
+
+    this.workingHours.set({
+      ...wh,
+      workingDays: Array.from(days),
+    });
+  }
+
+  isWorkingDaySelected(day: string): boolean {
+    return this.workingHours()?.workingDays.includes(day) ?? false;
+  }
+
+  updateStartTime(time: string): void {
+    const wh = this.workingHours();
+    if (!wh) return;
+
+    this.workingHours.set({
+      ...wh,
+      startTime: time + ':00', // Convert "HH:mm" to "HH:mm:ss"
+    });
+  }
+
+  updateEndTime(time: string): void {
+    const wh = this.workingHours();
+    if (!wh) return;
+
+    this.workingHours.set({
+      ...wh,
+      endTime: time + ':00', // Convert "HH:mm" to "HH:mm:ss"
+    });
+  }
+
+  getTimeValue(timeString: string): string {
+    // Convert "HH:mm:ss" to "HH:mm" for input[type="time"]
+    return timeString.substring(0, 5);
   }
 }

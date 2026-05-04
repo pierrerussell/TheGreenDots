@@ -2,7 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
-type Step = 'connect' | 'loading' | 'preview' | 'pricing';
+type Step = 'connect' | 'loading' | 'preview' | 'working-hours' | 'pricing';
 
 export interface TeamMember {
   id: string;
@@ -17,6 +17,14 @@ interface Organisation {
   id: string;
   name: string;
   tenantId: string;
+  timezone: string;
+}
+
+interface WorkingHours {
+  id: string | null;
+  startTime: string; // "HH:mm:ss"
+  endTime: string; // "HH:mm:ss"
+  workingDays: string[]; // ["monday", "tuesday", etc.]
 }
 
 @Component({
@@ -35,14 +43,35 @@ export class AddOrganizationComponent implements OnInit {
   loadingMessage = signal('Connecting to Microsoft...');
   tenantName = signal('Contoso Ltd');
   teamMembers = signal<TeamMember[]>([]);
+  orgId = signal<string | null>(null);
+  orgTimezone = signal('UTC');
+
+  // Working hours with smart defaults (9 AM - 5 PM, Mon-Fri)
+  workingHours = signal<WorkingHours>({
+    id: null,
+    startTime: '09:00:00',
+    endTime: '17:00:00',
+    workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+  });
+
+  workingDaysOptions = [
+    { value: 'monday', label: 'Monday' },
+    { value: 'tuesday', label: 'Tuesday' },
+    { value: 'wednesday', label: 'Wednesday' },
+    { value: 'thursday', label: 'Thursday' },
+    { value: 'friday', label: 'Friday' },
+    { value: 'saturday', label: 'Saturday' },
+    { value: 'sunday', label: 'Sunday' },
+  ];
 
   steps = [
     { id: 'connect' as Step, label: 'Connect' },
     { id: 'preview' as Step, label: 'Preview' },
+    { id: 'working-hours' as Step, label: 'Working Hours' },
     { id: 'pricing' as Step, label: 'Plan' },
   ];
 
-  private stepOrder: Step[] = ['connect', 'loading', 'preview', 'pricing'];
+  private stepOrder: Step[] = ['connect', 'loading', 'preview', 'working-hours', 'pricing'];
 
   ngOnInit(): void {
     const success = this.route.snapshot.queryParamMap.get('success');
@@ -56,10 +85,12 @@ export class AddOrganizationComponent implements OnInit {
   private loadOrganisation(orgId: string): void {
     this.currentStep.set('loading');
     this.loadingMessage.set('Loading organisation details...');
+    this.orgId.set(orgId);
 
     this.http.get<Organisation>(`/api/organisations/${orgId}`).subscribe({
       next: (org) => {
         this.tenantName.set(org.name);
+        this.orgTimezone.set(org.timezone || 'UTC');
         this.loadMembers(orgId);
       },
       error: (err) => {
@@ -72,6 +103,7 @@ export class AddOrganizationComponent implements OnInit {
   private loadMembers(orgId: string): void {
     this.loadingMessage.set('Loading team members...');
 
+    // Use members endpoint (returns live presence, all members auto-assigned during trial)
     this.http.get<TeamMember[]>(`/api/organisations/${orgId}/members`).subscribe({
       next: (members) => {
         this.teamMembers.set(members);
@@ -118,6 +150,10 @@ export class AddOrganizationComponent implements OnInit {
     window.location.href = '/api/auth/microsoft/connect';
   }
 
+  continueToWorkingHours(): void {
+    this.currentStep.set('working-hours');
+  }
+
   continueToPricing(): void {
     this.currentStep.set('pricing');
   }
@@ -126,10 +162,79 @@ export class AddOrganizationComponent implements OnInit {
     this.selectedPlan.set(plan);
   }
 
-  completeSetup(): void {
-    // TODO: Create organization, start subscription
-    console.log('Completing setup with plan:', this.selectedPlan());
-    this.router.navigate(['/']);
+  async completeSetup(): Promise<void> {
+    const orgIdValue = this.orgId();
+    if (!orgIdValue) {
+      console.error('No organisation ID available');
+      return;
+    }
+
+    // Save working hours before completing setup
+    try {
+      const wh = this.workingHours();
+      if (wh.workingDays.length === 0) {
+        alert('Please select at least one working day');
+        return;
+      }
+
+      const payload = {
+        startTime: wh.startTime,
+        endTime: wh.endTime,
+        workingDays: wh.workingDays,
+      };
+
+      await this.http
+        .put<WorkingHours>(`/api/organisations/${orgIdValue}/working-hours`, payload)
+        .toPromise();
+
+      // All members already have seats assigned during trial onboarding
+      // TODO: Create subscription with selected plan
+      console.log('Completing setup with plan:', this.selectedPlan());
+      this.router.navigate(['/organisation', orgIdValue, 'overview']);
+    } catch (err) {
+      console.error('Failed to complete setup', err);
+      alert('Failed to complete setup. Please try again.');
+    }
+  }
+
+  toggleWorkingDay(day: string): void {
+    const wh = this.workingHours();
+    const days = new Set(wh.workingDays);
+    if (days.has(day)) {
+      days.delete(day);
+    } else {
+      days.add(day);
+    }
+
+    this.workingHours.set({
+      ...wh,
+      workingDays: Array.from(days),
+    });
+  }
+
+  isWorkingDaySelected(day: string): boolean {
+    return this.workingHours().workingDays.includes(day);
+  }
+
+  updateStartTime(time: string): void {
+    const wh = this.workingHours();
+    this.workingHours.set({
+      ...wh,
+      startTime: time + ':00', // Convert "HH:mm" to "HH:mm:ss"
+    });
+  }
+
+  updateEndTime(time: string): void {
+    const wh = this.workingHours();
+    this.workingHours.set({
+      ...wh,
+      endTime: time + ':00', // Convert "HH:mm" to "HH:mm:ss"
+    });
+  }
+
+  getTimeValue(timeString: string): string {
+    // Convert "HH:mm:ss" to "HH:mm" for input[type="time"]
+    return timeString.substring(0, 5);
   }
 
   getInitials(name: string): string {

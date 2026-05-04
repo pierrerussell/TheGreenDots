@@ -171,6 +171,88 @@
       }
     </div>
 
+    <!-- Working Hours -->
+    <div class="bg-white rounded-xl border border-surface-200 p-5 mb-6 animate-fade-up" style="animation-delay: 0.15s;">
+      <h2 class="text-sm font-semibold text-surface-900 mb-1">Working Hours</h2>
+      <p class="text-sm text-surface-500 mb-4">Define your organisation's standard working hours and days</p>
+
+      @if (loadingWorkingHours()) {
+        <div class="flex items-center justify-center py-12">
+          <div class="flex items-center gap-3 text-surface-500">
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm">Loading working hours...</span>
+          </div>
+        </div>
+      } @else if (workingHours(); as wh) {
+        <div class="space-y-4">
+          <!-- Time Range -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-surface-700 mb-2">Start Time</label>
+              <input
+                type="time"
+                [value]="getTimeValue(wh.startTime)"
+                (change)="updateStartTime($any($event.target).value)"
+                class="w-full px-3 py-2 border border-surface-200 rounded-lg text-sm text-surface-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-surface-700 mb-2">End Time</label>
+              <input
+                type="time"
+                [value]="getTimeValue(wh.endTime)"
+                (change)="updateEndTime($any($event.target).value)"
+                class="w-full px-3 py-2 border border-surface-200 rounded-lg text-sm text-surface-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- Working Days -->
+          <div>
+            <label class="block text-sm font-medium text-surface-700 mb-2">Working Days</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              @for (day of workingDaysOptions; track day.value) {
+                <label
+                  class="relative flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors"
+                  [class.border-green-500]="isWorkingDaySelected(day.value)"
+                  [class.bg-green-50]="isWorkingDaySelected(day.value)"
+                  [class.border-surface-200]="!isWorkingDaySelected(day.value)"
+                  [class.hover:border-surface-300]="!isWorkingDaySelected(day.value)"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isWorkingDaySelected(day.value)"
+                    (change)="toggleWorkingDay(day.value)"
+                    class="w-4 h-4 text-green-600 border-surface-300 rounded focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
+                  />
+                  <span class="text-sm font-medium"
+                        [class.text-green-700]="isWorkingDaySelected(day.value)"
+                        [class.text-surface-900]="!isWorkingDaySelected(day.value)">
+                    {{ day.label }}
+                  </span>
+                </label>
+              }
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="pt-2">
+            <button
+              (click)="saveWorkingHours()"
+              [disabled]="savingWorkingHours()"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              {{ savingWorkingHours() ? 'Saving...' : 'Save Working Hours' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
     <!-- Danger Zone -->
     <div class="bg-white rounded-xl border border-red-200 overflow-hidden animate-fade-up" style="animation-delay: 0.15s;">
       <div class="px-5 py-4 bg-red-50 border-b border-red-200">

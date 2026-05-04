@@ -287,6 +287,7 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
             DisplayName = u.DisplayName ?? "Unknown",
             Email = u.Mail,
             JobTitle = u.JobTitle,
+            IsAssignedSeat = true, // Auto-assign all members during onboarding (trial = unlimited seats)
             CreatedAt = DateTimeOffset.UtcNow
         }).ToList();
 
