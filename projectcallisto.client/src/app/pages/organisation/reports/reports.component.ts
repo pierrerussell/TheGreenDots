@@ -1,7 +1,15 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { OrganisationService, PresenceTimelineEntry, WeeklyReportSettings } from '../organisation.service';
+import { HttpClient } from '@angular/common/http';
+import { OrganisationService, PresenceTimelineEntry } from '../organisation.service';
+
+interface WorkingHours {
+  id: string | null;
+  startTime: string; // "HH:mm:ss" format (TimeOnly from API)
+  endTime: string; // "HH:mm:ss" format
+  workingDays: string[]; // ["monday", "tuesday", "wednesday", etc.]
+}
 
 @Component({
   selector: 'app-reports',
@@ -11,37 +19,34 @@ import { OrganisationService, PresenceTimelineEntry, WeeklyReportSettings } from
 })
 export class ReportsComponent implements OnInit {
   orgService = inject(OrganisationService);
+  http = inject(HttpClient);
 
   selectedDate = signal(this.formatDateForInput(new Date()));
   timeline = signal<PresenceTimelineEntry[]>([]);
   loadingTimeline = signal(true);
+  workingHours = signal<WorkingHours | null>(null);
 
-  // Weekly report settings
-  weeklySettings = signal<WeeklyReportSettings>({
-    enabled: false,
-    recipients: [],
-    dayOfWeek: 1, // Monday
-    timeUtc: '09:00',
-  });
-  loadingSettings = signal(true);
-  savingSettings = signal(false);
-  newRecipient = signal('');
-
-  // Hours to display
-  hours = Array.from({ length: 17 }, (_, i) => i + 6);
-  daysOfWeek = [
-    { value: 0, label: 'Sunday' },
-    { value: 1, label: 'Monday' },
-    { value: 2, label: 'Tuesday' },
-    { value: 3, label: 'Wednesday' },
-    { value: 4, label: 'Thursday' },
-    { value: 5, label: 'Friday' },
-    { value: 6, label: 'Saturday' },
-  ];
+  // Hours to display - full 24-hour view
+  hours = Array.from({ length: 24 }, (_, i) => i);
 
   ngOnInit(): void {
     this.loadTimeline();
-    this.loadWeeklySettings();
+    this.loadWorkingHours();
+  }
+
+  private async loadWorkingHours(): Promise<void> {
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    try {
+      const wh = await this.http
+        .get<WorkingHours>(`/api/organisations/${org.id}/working-hours`)
+        .toPromise();
+      this.workingHours.set(wh || null);
+    } catch (err) {
+      console.log('No working hours configured');
+      this.workingHours.set(null);
+    }
   }
 
   private loadTimeline(): void {
@@ -67,19 +72,6 @@ export class ReportsComponent implements OnInit {
       .catch(() => {
         this.timeline.set([]);
         this.loadingTimeline.set(false);
-      });
-  }
-
-  private loadWeeklySettings(): void {
-    this.loadingSettings.set(true);
-
-    this.orgService.getWeeklyReportSettings()
-      .then(settings => {
-        this.weeklySettings.set(settings);
-        this.loadingSettings.set(false);
-      })
-      .catch(() => {
-        this.loadingSettings.set(false);
       });
   }
 
@@ -131,31 +123,58 @@ export class ReportsComponent implements OnInit {
   }
 
   getTimelineSegments(entries: PresenceTimelineEntry['entries']): { left: string; width: string; status: string }[] {
-    const dayStart = 6;
-    const dayEnd = 23;
+    const dayStart = 0; // Full 24-hour view
+    const dayEnd = 24;
     const totalMinutes = (dayEnd - dayStart) * 60;
 
-    return entries
-      .filter(entry => {
-        const start = new Date(entry.startTime);
-        const startHour = start.getHours();
-        const end = entry.endTime ? new Date(entry.endTime) : new Date();
-        const endHour = end.getHours();
-        return startHour < dayEnd && endHour >= dayStart;
-      })
-      .map(entry => {
-        const start = new Date(entry.startTime);
-        const end = entry.endTime ? new Date(entry.endTime) : new Date();
+    return entries.map(entry => {
+      const start = new Date(entry.startTime);
+      const end = entry.endTime ? new Date(entry.endTime) : new Date();
 
-        const clampedStart = Math.max(0, (start.getHours() - dayStart) * 60 + start.getMinutes());
-        const clampedEnd = Math.min(totalMinutes, (end.getHours() - dayStart) * 60 + end.getMinutes());
+      const clampedStart = Math.max(0, (start.getHours() - dayStart) * 60 + start.getMinutes());
+      const clampedEnd = Math.min(totalMinutes, (end.getHours() - dayStart) * 60 + end.getMinutes());
 
-        const left = (clampedStart / totalMinutes) * 100;
-        // Add 0.1% overlap to prevent 1px gaps from rounding errors
-        const width = Math.max(0.5, ((clampedEnd - clampedStart) / totalMinutes) * 100 + 0.1);
+      const left = (clampedStart / totalMinutes) * 100;
+      // Add 0.1% overlap to prevent 1px gaps from rounding errors
+      const width = Math.max(0.5, ((clampedEnd - clampedStart) / totalMinutes) * 100 + 0.1);
 
-        return { left: `${left}%`, width: `${width}%`, status: entry.status };
-      });
+      return { left: `${left}%`, width: `${width}%`, status: entry.status };
+    });
+  }
+
+  getWorkingHoursOverlay(): { left: string; width: string } | null {
+    const wh = this.workingHours();
+    if (!wh) return null;
+
+    // Parse "HH:mm:ss" format
+    const parseTime = (timeStr: string): number => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const startMinutes = parseTime(wh.startTime);
+    const endMinutes = parseTime(wh.endTime);
+    const totalMinutes = 24 * 60;
+
+    const left = (startMinutes / totalMinutes) * 100;
+    const width = ((endMinutes - startMinutes) / totalMinutes) * 100;
+
+    return { left: `${left}%`, width: `${width}%` };
+  }
+
+  isWorkingDay(): boolean {
+    const wh = this.workingHours();
+    if (!wh) return false;
+
+    const date = new Date(this.selectedDate() + 'T00:00:00');
+    const jsDay = date.getDay(); // 0 = Sunday, 1 = Monday, 2 = Tuesday, etc.
+
+    // Map JavaScript day number to day name
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[jsDay];
+
+    // Check if this day is in the working days array
+    return wh.workingDays.includes(dayName);
   }
 
   getSegmentColor(status: string): string {
@@ -168,50 +187,6 @@ export class ReportsComponent implements OnInit {
       Offline: 'bg-status-offline',
     };
     return colors[status] || 'bg-surface-300';
-  }
-
-  // Weekly report settings methods
-  toggleWeeklyReport(): void {
-    this.weeklySettings.update(s => ({ ...s, enabled: !s.enabled }));
-  }
-
-  updateDayOfWeek(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    this.weeklySettings.update(s => ({ ...s, dayOfWeek: parseInt(select.value, 10) }));
-  }
-
-  updateTime(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.weeklySettings.update(s => ({ ...s, timeUtc: input.value }));
-  }
-
-  addRecipient(): void {
-    const email = this.newRecipient().trim();
-    if (email && !this.weeklySettings().recipients.includes(email)) {
-      this.weeklySettings.update(s => ({
-        ...s,
-        recipients: [...s.recipients, email],
-      }));
-      this.newRecipient.set('');
-    }
-  }
-
-  removeRecipient(email: string): void {
-    this.weeklySettings.update(s => ({
-      ...s,
-      recipients: s.recipients.filter(r => r !== email),
-    }));
-  }
-
-  async saveWeeklySettings(): Promise<void> {
-    this.savingSettings.set(true);
-    try {
-      await this.orgService.updateWeeklyReportSettings(this.weeklySettings());
-    } catch (err) {
-      console.error('Failed to save settings', err);
-    } finally {
-      this.savingSettings.set(false);
-    }
   }
 
   exportCsv(): void {
