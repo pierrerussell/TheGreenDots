@@ -17,8 +17,12 @@ public class InsightDetectionService : IInsightDetectionService
     {
         var insights = new List<PresenceInsight>();
 
-        // Calculate overtime
-        var overtimeHours = fullPeriod.TotalHours - workingHours.TotalHours;
+        // Calculate actual online hours (excluding offline time)
+        var workingOnlineHours = workingHours.TotalHours - workingHours.OfflineHours;
+        var fullPeriodOnlineHours = fullPeriod.TotalHours - fullPeriod.OfflineHours;
+
+        // Calculate overtime (time spent online outside of working hours)
+        var overtimeHours = fullPeriodOnlineHours - workingOnlineHours;
 
         // Detect High Overtime
         if (overtimeHours > OVERTIME_THRESHOLD_HOURS)
@@ -56,7 +60,11 @@ public class InsightDetectionService : IInsightDetectionService
         var expectedWorkingHours = CalculateExpectedWorkingHours(config);
         if (expectedWorkingHours > 0)
         {
-            var offlinePercentage = workingHours.OfflineHours / expectedWorkingHours;
+            // Calculate how much time was offline during working hours
+            // Expected hours - actual online hours = offline hours
+            var actualOfflineHours = expectedWorkingHours - workingOnlineHours;
+            var offlinePercentage = actualOfflineHours / expectedWorkingHours;
+
             if (offlinePercentage > HIGH_OFFLINE_PERCENTAGE)
             {
                 insights.Add(new PresenceInsight
