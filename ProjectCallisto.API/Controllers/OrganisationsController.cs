@@ -82,30 +82,6 @@ public class OrganisationsController : ControllerBase
         return Ok(new { hasAccess = true, role = roleLower });
     }
 
-    [HttpGet("{id:guid}/debug-auth")]
-    public async Task<IActionResult> DebugAuth(Guid id)
-    {
-        var subjectId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-        var user = await GetCurrentUserAsync();
-
-        var orgUser = user != null
-            ? await _dbContext.OrganisationUsers.FirstOrDefaultAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id)
-            : null;
-
-        return Ok(new
-        {
-            subjectId,
-            userId = user?.Id,
-            userEmail = user?.Email,
-            orgUserId = orgUser?.UserId,
-            orgUserRole = orgUser?.Role.ToString(),
-            orgUserRoleLower = orgUser?.Role.ToString().ToLower(),
-            hasViewDashboardPermission = orgUser != null && RolePermissions.HasPermission(orgUser.Role, Permission.ViewDashboard),
-            hasManageSeatsPermission = orgUser != null && RolePermissions.HasPermission(orgUser.Role, Permission.ManageSeats),
-            allClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList()
-        });
-    }
-
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = nameof(Permission.ManageSettings))]
     public async Task<IActionResult> DeleteOrganisation(Guid id)
