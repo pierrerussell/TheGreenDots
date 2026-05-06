@@ -121,12 +121,20 @@
           </div>
 
           <!-- Actions -->
-          <div class="pt-3 border-t border-surface-100">
+          <div class="pt-3 border-t border-surface-100 flex gap-2">
+            <button
+              type="button"
+              (click)="sendDailySample()"
+              [disabled]="dailySendingSample()"
+              class="px-4 py-2 bg-surface-100 hover:bg-surface-200 disabled:bg-surface-50 disabled:text-surface-400 text-surface-700 text-sm font-semibold rounded-lg transition-colors"
+            >
+              {{ dailySendingSample() ? 'Sending...' : 'Send Sample Email' }}
+            </button>
             <button
               type="button"
               (click)="saveDailySettings()"
               [disabled]="dailySaving()"
-              class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
+              class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               {{ dailySaving() ? 'Saving...' : 'Save Changes' }}
             </button>
@@ -263,12 +271,20 @@
           </div>
 
           <!-- Actions -->
-          <div class="pt-3 border-t border-surface-100">
+          <div class="pt-3 border-t border-surface-100 flex gap-2">
+            <button
+              type="button"
+              (click)="sendWeeklySample()"
+              [disabled]="weeklySendingSample()"
+              class="px-4 py-2 bg-surface-100 hover:bg-surface-200 disabled:bg-surface-50 disabled:text-surface-400 text-surface-700 text-sm font-semibold rounded-lg transition-colors"
+            >
+              {{ weeklySendingSample() ? 'Sending...' : 'Send Sample Email' }}
+            </button>
             <button
               type="button"
               (click)="saveWeeklySettings()"
               [disabled]="weeklySaving()"
-              class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
+              class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               {{ weeklySaving() ? 'Saving...' : 'Save Changes' }}
             </button>
@@ -408,12 +424,20 @@
           </div>
 
           <!-- Actions -->
-          <div class="pt-3 border-t border-surface-100">
+          <div class="pt-3 border-t border-surface-100 flex gap-2">
+            <button
+              type="button"
+              (click)="sendMonthlySample()"
+              [disabled]="monthlySendingSample()"
+              class="px-4 py-2 bg-surface-100 hover:bg-surface-200 disabled:bg-surface-50 disabled:text-surface-400 text-surface-700 text-sm font-semibold rounded-lg transition-colors"
+            >
+              {{ monthlySendingSample() ? 'Sending...' : 'Send Sample Email' }}
+            </button>
             <button
               type="button"
               (click)="saveMonthlySettings()"
               [disabled]="monthlySaving()"
-              class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
+              class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               {{ monthlySaving() ? 'Saving...' : 'Save Changes' }}
             </button>

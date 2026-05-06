@@ -63,6 +63,7 @@ var host = new HostBuilder()
         services.AddScoped<IReportCalculationService, ReportCalculationService>();
         services.AddScoped<IPresenceBreakdownCalculator, PresenceBreakdownCalculator>();
         services.AddScoped<IInsightDetectionService, InsightDetectionService>();
+        services.AddScoped<ReportEmailHtmlGenerator>();
     })
     .Build();
 

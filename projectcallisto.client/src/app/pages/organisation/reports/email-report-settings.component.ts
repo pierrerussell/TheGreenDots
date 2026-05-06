@@ -39,6 +39,7 @@ export class EmailReportSettingsComponent implements OnInit {
   dailyTime = signal(9);
   dailyRecipients = signal<EmailRecipient[]>([]);
   dailySaving = signal(false);
+  dailySendingSample = signal(false);
   dailyNewEmail = signal('');
   dailyNewName = signal('');
 
@@ -49,6 +50,7 @@ export class EmailReportSettingsComponent implements OnInit {
   weeklyTime = signal(9);
   weeklyRecipients = signal<EmailRecipient[]>([]);
   weeklySaving = signal(false);
+  weeklySendingSample = signal(false);
   weeklyNewEmail = signal('');
   weeklyNewName = signal('');
 
@@ -59,6 +61,7 @@ export class EmailReportSettingsComponent implements OnInit {
   monthlyTime = signal(9);
   monthlyRecipients = signal<EmailRecipient[]>([]);
   monthlySaving = signal(false);
+  monthlySendingSample = signal(false);
   monthlyNewEmail = signal('');
   monthlyNewName = signal('');
 
@@ -322,6 +325,73 @@ export class EmailReportSettingsComponent implements OnInit {
 
   removeMonthlyRecipient(index: number): void {
     this.monthlyRecipients.update(recipients => recipients.filter((_, i) => i !== index));
+  }
+
+  // Send sample email methods
+  async sendDailySample(): Promise<void> {
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    this.dailySendingSample.set(true);
+    try {
+      const response = await this.http
+        .post<{ message: string }>(`/api/organisations/${org.id}/email-report-settings/send-sample`, {
+          frequency: 'Daily'
+        })
+        .toPromise();
+
+      console.log('Sample email sent:', response?.message);
+      alert(response?.message || 'Sample email sent successfully!');
+    } catch (err) {
+      console.error('Failed to send sample email', err);
+      alert('Failed to send sample email. Please try again.');
+    } finally {
+      this.dailySendingSample.set(false);
+    }
+  }
+
+  async sendWeeklySample(): Promise<void> {
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    this.weeklySendingSample.set(true);
+    try {
+      const response = await this.http
+        .post<{ message: string }>(`/api/organisations/${org.id}/email-report-settings/send-sample`, {
+          frequency: 'Weekly'
+        })
+        .toPromise();
+
+      console.log('Sample email sent:', response?.message);
+      alert(response?.message || 'Sample email sent successfully!');
+    } catch (err) {
+      console.error('Failed to send sample email', err);
+      alert('Failed to send sample email. Please try again.');
+    } finally {
+      this.weeklySendingSample.set(false);
+    }
+  }
+
+  async sendMonthlySample(): Promise<void> {
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    this.monthlySendingSample.set(true);
+    try {
+      const response = await this.http
+        .post<{ message: string }>(`/api/organisations/${org.id}/email-report-settings/send-sample`, {
+          frequency: 'Monthly'
+        })
+        .toPromise();
+
+      console.log('Sample email sent:', response?.message);
+      alert(response?.message || 'Sample email sent successfully!');
+    } catch (err) {
+      console.error('Failed to send sample email', err);
+      alert('Failed to send sample email. Please try again.');
+    } finally {
+      this.monthlySendingSample.set(false);
+    }
   }
 
   // Utility methods

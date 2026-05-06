@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ProjectCallisto.Application.Emails;
+using ProjectCallisto.Application.Queues;
+using ProjectCallisto.Application.Reports;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.Domain.Users;
 using ProjectCallisto.EfCore;
@@ -13,10 +16,20 @@ namespace ProjectCallisto.API.Controllers;
 public class EmailReportSettingsController : ControllerBase
 {
     private readonly AppDbContext _dbContext;
+    private readonly IReportCalculationService _reportService;
+    private readonly ReportEmailHtmlGenerator _htmlGenerator;
+    private readonly IQueueService<EmailMessage> _emailQueue;
 
-    public EmailReportSettingsController(AppDbContext dbContext)
+    public EmailReportSettingsController(
+        AppDbContext dbContext,
+        IReportCalculationService reportService,
+        ReportEmailHtmlGenerator htmlGenerator,
+        IQueueService<EmailMessage> emailQueue)
     {
         _dbContext = dbContext;
+        _reportService = reportService;
+        _htmlGenerator = htmlGenerator;
+        _emailQueue = emailQueue;
     }
 
     [HttpGet]
@@ -184,6 +197,91 @@ public class EmailReportSettingsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("send-sample")]
+    [Authorize(Policy = nameof(Permission.ManageSettings))]
+    public async Task<IActionResult> SendSampleEmail(
+        Guid orgId,
+        [FromBody] SendSampleEmailRequest request,
+        CancellationToken ct)
+    {
+        // Get current user's email
+        var currentUser = await GetCurrentUserAsync();
+        if (currentUser == null)
+            return Unauthorized();
+
+        // Calculate report based on frequency
+        string htmlBody;
+        string subject;
+
+        switch (request.Frequency.ToLowerInvariant())
+        {
+            case "daily":
+            {
+                var report = await _reportService.CalculateDailyReportAsync(orgId, ct);
+                var reportDate = report.StartDate.ToString("dddd, MMMM d, yyyy");
+                var reportPeriod = report.StartDate.ToString("MMMM d, yyyy");
+
+                htmlBody = _htmlGenerator.GenerateDailyReportHtml(
+                    report.OrganisationName,
+                    reportDate,
+                    reportPeriod,
+                    report.TotalMembers,
+                    report.Employees,
+                    DateTime.UtcNow);
+
+                subject = $"[Sample] Daily Presence Report - {reportPeriod}";
+                break;
+            }
+
+            case "weekly":
+            {
+                var report = await _reportService.CalculateWeeklyReportAsync(orgId, ct);
+                var reportPeriod = $"{report.StartDate:MMMM d} - {report.EndDate:MMMM d, yyyy}";
+
+                htmlBody = _htmlGenerator.GenerateWeeklyReportHtml(
+                    report.OrganisationName,
+                    reportPeriod,
+                    report.TotalMembers,
+                    report.Employees,
+                    DateTime.UtcNow);
+
+                subject = $"[Sample] Weekly Presence Report - {reportPeriod}";
+                break;
+            }
+
+            case "monthly":
+            {
+                var report = await _reportService.CalculateMonthlyReportAsync(orgId, ct);
+                var reportPeriod = $"{report.StartDate:MMMM yyyy}";
+
+                htmlBody = _htmlGenerator.GenerateMonthlyReportHtml(
+                    report.OrganisationName,
+                    reportPeriod,
+                    report.TotalMembers,
+                    report.Employees,
+                    DateTime.UtcNow);
+
+                subject = $"[Sample] Monthly Presence Report - {reportPeriod}";
+                break;
+            }
+
+            default:
+                return BadRequest($"Invalid frequency: {request.Frequency}. Must be Daily, Weekly, or Monthly.");
+        }
+
+        // Enqueue email to current user
+        var emailMessage = new EmailMessage
+        {
+            To = currentUser.Email,
+            Subject = subject,
+            HtmlBody = htmlBody
+        };
+
+        await _emailQueue.EnqueueAsync(emailMessage);
+
+        return Ok(new { message = $"Sample email queued and will be sent to {currentUser.Email}" });
+    }
+
     private static ReportFrequency ParseFrequency(string frequency) => frequency.ToLowerInvariant() switch
     {
         "daily" => ReportFrequency.Daily,
@@ -257,3 +355,4 @@ public record UpdateEmailReportSettingsRequest(
 
 public record RecipientRequest(string Email, string? Name);
 public record RecipientResponse(Guid Id, string Email, string? Name);
+public record SendSampleEmailRequest(string Frequency);

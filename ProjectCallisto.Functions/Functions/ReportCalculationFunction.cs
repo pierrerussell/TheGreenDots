@@ -36,34 +36,67 @@ public class ReportCalculationFunction
         using var scope = _serviceScopeFactory.CreateScope();
         var reportService = scope.ServiceProvider.GetRequiredService<IReportCalculationService>();
         var emailQueue = scope.ServiceProvider.GetRequiredService<IQueueService<EmailMessage>>();
+        var htmlGenerator = scope.ServiceProvider.GetRequiredService<ReportEmailHtmlGenerator>();
 
         // Calculate report based on frequency
-        object reportData;
-        string templateId;
+        string htmlBody;
+        string subject;
 
         switch (job!.Frequency)
         {
             case "Daily":
-                reportData = await reportService.CalculateDailyReportAsync(job.OrganisationId, ct);
-                templateId = "daily-presence-report"; // Future template
+            {
+                var report = await reportService.CalculateDailyReportAsync(job.OrganisationId, ct);
+                var reportDate = report.StartDate.ToString("dddd, MMMM d, yyyy");
+                var reportPeriod = report.StartDate.ToString("MMMM d, yyyy");
+
+                htmlBody = htmlGenerator.GenerateDailyReportHtml(
+                    report.OrganisationName,
+                    reportDate,
+                    reportPeriod,
+                    report.TotalMembers,
+                    report.Employees,
+                    DateTime.UtcNow);
+
+                subject = $"Daily Presence Report - {reportPeriod}";
                 break;
+            }
 
             case "Weekly":
-                reportData = await reportService.CalculateWeeklyReportAsync(job.OrganisationId, ct);
-                templateId = "weekly-presence-report";
+            {
+                var report = await reportService.CalculateWeeklyReportAsync(job.OrganisationId, ct);
+                var reportPeriod = $"{report.StartDate:MMMM d} - {report.EndDate:MMMM d, yyyy}";
+
+                htmlBody = htmlGenerator.GenerateWeeklyReportHtml(
+                    report.OrganisationName,
+                    reportPeriod,
+                    report.TotalMembers,
+                    report.Employees,
+                    DateTime.UtcNow);
+
+                subject = $"Weekly Presence Report - {reportPeriod}";
                 break;
+            }
 
             case "Monthly":
-                reportData = await reportService.CalculateMonthlyReportAsync(job.OrganisationId, ct);
-                templateId = "monthly-presence-report"; // Future template
+            {
+                var report = await reportService.CalculateMonthlyReportAsync(job.OrganisationId, ct);
+                var reportPeriod = $"{report.StartDate:MMMM yyyy}";
+
+                htmlBody = htmlGenerator.GenerateMonthlyReportHtml(
+                    report.OrganisationName,
+                    reportPeriod,
+                    report.TotalMembers,
+                    report.Employees,
+                    DateTime.UtcNow);
+
+                subject = $"Monthly Presence Report - {reportPeriod}";
                 break;
+            }
 
             default:
                 throw new InvalidOperationException($"Unknown frequency: {job.Frequency}");
         }
-
-        // Cast to common interface (they all have same properties for now)
-        dynamic report = reportData;
 
         // Enqueue email for each recipient
         foreach (var recipient in job.Recipients)
@@ -71,17 +104,8 @@ public class ReportCalculationFunction
             var emailMessage = new EmailMessage
             {
                 To = recipient.Email,
-                TemplateId = templateId,
-                TemplateData = new Dictionary<string, object>
-                {
-                    { "organization_name", report.OrganisationName },
-                    { "report_start", report.StartDate.ToString("MMMM dd, yyyy") },
-                    { "report_end", report.EndDate.ToString("MMMM dd, yyyy") },
-                    { "recipient_name", recipient.Name ?? recipient.Email },
-                    { "total_members", report.TotalMembers },
-                    { "frequency", job.Frequency.ToLower() }
-                    // TODO: Add employee rows HTML generation
-                }
+                Subject = subject,
+                HtmlBody = htmlBody
             };
 
             await emailQueue.EnqueueAsync(emailMessage);

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ProjectCallisto.Application.Reports.Models;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
@@ -10,15 +11,18 @@ public class ReportCalculationService : IReportCalculationService
     private readonly AppDbContext _dbContext;
     private readonly IPresenceBreakdownCalculator _calculator;
     private readonly IInsightDetectionService _insightDetector;
+    private readonly ILogger<ReportCalculationService> _logger;
 
     public ReportCalculationService(
         AppDbContext dbContext,
         IPresenceBreakdownCalculator calculator,
-        IInsightDetectionService insightDetector)
+        IInsightDetectionService insightDetector,
+        ILogger<ReportCalculationService> logger)
     {
         _dbContext = dbContext;
         _calculator = calculator;
         _insightDetector = insightDetector;
+        _logger = logger;
     }
 
     public async Task<DailyReportData> CalculateDailyReportAsync(
@@ -121,15 +125,16 @@ public class ReportCalculationService : IReportCalculationService
         {
             throw new InvalidOperationException($"Organisation with ID {organisationId} not found");
         }
-
-        if (organisation.WorkingHours == null)
-        {
-            throw new InvalidOperationException($"Organisation {organisationId} has no working hours configured");
-        }
-
+        
+        // Default to UTC if no timezone is configured
         if (string.IsNullOrEmpty(organisation.Timezone))
         {
-            throw new InvalidOperationException($"Organisation {organisationId} has no timezone configured");
+            _logger.LogWarning(
+                "Organisation {OrgId} ({OrgName}) has no timezone configured. Defaulting to UTC. " +
+                "Please configure timezone in organisation settings.",
+                organisationId, organisation.Name);
+
+            organisation.Timezone = "UTC";
         }
 
         return organisation;

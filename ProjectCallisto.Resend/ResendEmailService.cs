@@ -64,4 +64,44 @@ public class ResendEmailService : IEmailService
             throw;
         }
     }
+
+    public async Task SendHtmlEmailAsync(string to, string subject, string htmlContent, Stream? csvAttachment = null, string? csvFileName = null)
+    {
+        try
+        {
+            var message = new EmailMessage
+            {
+                From = _options.Value.FromEmail,
+                To = to,
+                Subject = subject,
+                HtmlBody = htmlContent
+            };
+
+            if (csvAttachment != null && !string.IsNullOrEmpty(csvFileName))
+            {
+                using var memoryStream = new MemoryStream();
+                await csvAttachment.CopyToAsync(memoryStream);
+
+                message.Attachments = new List<EmailAttachment>()
+                {
+                    new EmailAttachment()
+                    {
+                        Content = memoryStream.ToArray(),
+                        ContentType = "text/csv",
+                        Filename = csvFileName
+                    }
+                };
+            }
+
+            var response = await _resend.EmailSendAsync(message);
+            _logger.LogInformation(
+                "HTML email sent. ID: {EmailId}, Subject: {Subject}",
+                response.Content, subject);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send HTML email to {To} with subject {Subject}", to, subject);
+            throw;
+        }
+    }
 }
