@@ -54,31 +54,25 @@ public class OrganisationsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/access")]
+    [Authorize]
     public async Task<IActionResult> CheckAccess(Guid id)
     {
         // Temporarily removed authorization to debug - check manually
         var subjectId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-        Console.WriteLine($"[DEBUG] CheckAccess called for org {id}");
-        Console.WriteLine($"[DEBUG] SubjectId from claims: {subjectId}");
-
+        
         var user = await GetCurrentUserAsync();
-        Console.WriteLine($"[DEBUG] User lookup result: {(user != null ? $"Found (Id: {user.Id}, Email: {user.Email})" : "NULL")}");
 
         if (user == null) return Unauthorized();
 
         var orgUser = await _dbContext.OrganisationUsers
             .FirstOrDefaultAsync(ou => ou.UserId == user.Id && ou.OrganisationId == id);
 
-        Console.WriteLine($"[DEBUG] OrgUser lookup result: {(orgUser != null ? $"Found (Role: {orgUser.Role})" : "NULL")}");
-
         if (orgUser == null)
         {
-            Console.WriteLine($"[DEBUG] Returning hasAccess=false - no OrganisationUser record found");
             return Ok(new { hasAccess = false, role = (string?)null });
         }
 
         var roleLower = orgUser.Role.ToString().ToLower();
-        Console.WriteLine($"[DEBUG] Returning hasAccess=true, role={roleLower}");
         return Ok(new { hasAccess = true, role = roleLower });
     }
 
