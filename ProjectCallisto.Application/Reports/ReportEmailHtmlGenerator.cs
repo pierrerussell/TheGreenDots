@@ -259,36 +259,58 @@ public class ReportEmailHtmlGenerator
         var segments = new StringBuilder();
         var sortedRecords = presenceRecords.OrderBy(r => r.RecordedAt).ToList();
 
-        // Assume the period spans 24 hours
+        // Determine the period - use the date of the first record as the day
         var periodStart = sortedRecords.First().RecordedAt.Date;
-        var periodEnd = periodStart.AddDays(1);
+        var periodEnd = periodStart.AddDays(1); // Midnight of next day
         var totalMinutes = 24 * 60.0;
 
-        // Build segments from presence records with hourly markers
+        // Build segments from presence records, splitting at hour boundaries
         for (int i = 0; i < sortedRecords.Count; i++)
         {
             var current = sortedRecords[i];
             var nextRecord = i < sortedRecords.Count - 1 ? sortedRecords[i + 1] : null;
 
-            // Calculate segment duration
-            var segmentStart = current.RecordedAt;
+            // Calculate segment boundaries, clipping to period
+            var segmentStart = current.RecordedAt < periodStart ? periodStart : current.RecordedAt;
             var segmentEnd = nextRecord?.RecordedAt ?? periodEnd;
 
-            var durationMinutes = (segmentEnd - segmentStart).TotalMinutes;
-            var widthPercent = (durationMinutes / totalMinutes) * 100.0;
+            // Clip to period end (handle midnight boundary)
+            if (segmentEnd > periodEnd)
+                segmentEnd = periodEnd;
 
-            // Only show segments that are visible (> 0.5%)
-            if (widthPercent < 0.5) continue;
+            if (segmentEnd <= segmentStart)
+                continue;
 
             var color = GetPresenceColor(current.Availability);
 
-            // Check if this segment starts at an hour boundary (within 2 minutes)
-            var segmentStartMinute = (segmentStart - periodStart).TotalMinutes;
-            var hoursSinceMidnight = segmentStartMinute / 60.0;
-            var isNearHourBoundary = Math.Abs(hoursSinceMidnight - Math.Round(hoursSinceMidnight)) < (2.0 / 60.0);
-            var borderStyle = isNearHourBoundary && i > 0 ? "border-left: 1px solid rgba(255,255,255,0.3);" : "";
+            // Split this segment at hour boundaries to add visual markers
+            var currentTime = segmentStart;
+            while (currentTime < segmentEnd)
+            {
+                // Find next hour boundary
+                var currentHour = new DateTimeOffset(
+                    currentTime.Year, currentTime.Month, currentTime.Day,
+                    currentTime.Hour, 0, 0, currentTime.Offset);
+                var nextHourBoundary = currentHour.AddHours(1);
 
-            segments.Append($@"<td style=""width: {widthPercent:F2}%; background-color: {color}; height: 18px; {borderStyle}""></td>");
+                // Determine end of this sub-segment
+                var subSegmentEnd = nextHourBoundary < segmentEnd ? nextHourBoundary : segmentEnd;
+
+                var subDurationMinutes = (subSegmentEnd - currentTime).TotalMinutes;
+                var subWidthPercent = (subDurationMinutes / totalMinutes) * 100.0;
+
+                // Only show segments that are visible (> 0.1%)
+                if (subWidthPercent > 0.1)
+                {
+                    // Add border at hour boundaries (except at midnight)
+                    var isHourBoundary = currentTime.Minute == 0 && currentTime.Second == 0 && currentTime.Hour != 0;
+                    var borderStyle = isHourBoundary ? "border-left: 1px solid rgba(255,255,255,0.4);" : "";
+
+                    segments.Append($@"<td style=""width: {subWidthPercent:F2}%; background-color: {color}; height: 18px; {borderStyle}""></td>");
+                }
+
+                currentTime = subSegmentEnd;
+            }
         }
 
         return segments.ToString();

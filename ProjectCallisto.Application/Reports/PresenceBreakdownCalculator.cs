@@ -109,6 +109,10 @@ public class PresenceBreakdownCalculator : IPresenceBreakdownCalculator
                 ? sortedRecords[i + 1].RecordedAt
                 : periodEnd;
 
+            // Clip to period bounds to handle records that span period boundaries
+            if (nextRecordTime > periodEnd)
+                nextRecordTime = periodEnd;
+
             var duration = (nextRecordTime - current.RecordedAt).TotalHours;
 
             // Check for offline gap
