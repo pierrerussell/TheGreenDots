@@ -30,6 +30,11 @@ interface WorkingHours {
   workingDays: string[]; // ["monday", "tuesday", etc.]
 }
 
+interface TimezoneInfo {
+  timezone: string;
+  timezoneDetectedFrom: string;
+}
+
 @Component({
   selector: 'app-settings',
   standalone: true,
@@ -69,9 +74,33 @@ export class SettingsComponent implements OnInit {
     { value: 'sunday', label: 'Sunday' },
   ];
 
+  // Timezone
+  timezoneInfo = signal<TimezoneInfo | null>(null);
+  loadingTimezone = signal(true);
+  editingTimezone = signal(false);
+  selectedTimezone = signal('');
+  savingTimezone = signal(false);
+
+  // Common timezones for quick selection
+  commonTimezones = [
+    { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+    { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
+    { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
+    { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
+    { value: 'Europe/London', label: 'London (GMT/BST)' },
+    { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+    { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+    { value: 'Asia/Shanghai', label: 'Shanghai (CST)' },
+    { value: 'Asia/Singapore', label: 'Singapore (SGT)' },
+    { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+    { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
+  ];
+
   ngOnInit(): void {
     this.loadSeatManagement();
     this.loadWorkingHours();
+    this.loadTimezone();
   }
 
   startEditingName(): void {
@@ -285,5 +314,58 @@ export class SettingsComponent implements OnInit {
   getTimeValue(timeString: string): string {
     // Convert "HH:mm:ss" to "HH:mm" for input[type="time"]
     return timeString.substring(0, 5);
+  }
+
+  // Timezone management
+  async loadTimezone(): Promise<void> {
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    this.loadingTimezone.set(true);
+    try {
+      const data = await this.http
+        .get<TimezoneInfo>(`/api/organisations/${org.id}/timezone`)
+        .toPromise();
+
+      this.timezoneInfo.set(data || null);
+    } catch (err) {
+      console.error('Failed to load timezone', err);
+    } finally {
+      this.loadingTimezone.set(false);
+    }
+  }
+
+  startEditingTimezone(): void {
+    const current = this.timezoneInfo();
+    this.selectedTimezone.set(current?.timezone || 'UTC');
+    this.editingTimezone.set(true);
+  }
+
+  cancelEditingTimezone(): void {
+    this.editingTimezone.set(false);
+    this.selectedTimezone.set('');
+  }
+
+  async saveTimezone(): Promise<void> {
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    this.savingTimezone.set(true);
+    try {
+      const updated = await this.http
+        .put<TimezoneInfo>(`/api/organisations/${org.id}/timezone`, {
+          timezone: this.selectedTimezone()
+        })
+        .toPromise();
+
+      this.timezoneInfo.set(updated || null);
+      this.editingTimezone.set(false);
+      alert('Timezone updated successfully! Email reports will now use the correct timezone.');
+    } catch (err) {
+      console.error('Failed to save timezone', err);
+      alert('Failed to save timezone. Please try again.');
+    } finally {
+      this.savingTimezone.set(false);
+    }
   }
 }

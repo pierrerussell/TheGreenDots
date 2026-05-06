@@ -167,6 +167,10 @@ public class ReportCalculationService : IReportCalculationService
             .ThenBy(p => p.RecordedAt)
             .ToListAsync(ct);
 
+        _logger.LogInformation(
+            "Fetched {RecordCount} presence records for {MemberCount} members between {Start} and {End}",
+            allPresenceRecords.Count, members.Count, periodStart, periodEnd);
+
         // Group records by TenantMemberId
         var recordsByMember = allPresenceRecords
             .GroupBy(p => p.TenantMemberId)
@@ -218,7 +222,8 @@ public class ReportCalculationService : IReportCalculationService
                 WorkingHoursBreakdown = workingHoursBreakdown,
                 FullWeekBreakdown = fullPeriodBreakdown,
                 OvertimeHours = overtimeHours,
-                Insights = insights
+                Insights = insights,
+                PresenceRecords = memberRecords // Include raw records for timeline generation
             });
         }
 
@@ -248,6 +253,10 @@ public class ReportCalculationService : IReportCalculationService
             yesterday.Day,
             23, 59, 59,
             tzInfo.GetUtcOffset(yesterday.AddHours(23)));
+
+        _logger.LogInformation(
+            "Daily report date range: {Start} to {End} (Timezone: {Timezone}, Now in TZ: {NowInTz}, Yesterday: {Yesterday})",
+            periodStart, periodEnd, timezone, nowInOrgTz, yesterday);
 
         return (periodStart, periodEnd);
     }

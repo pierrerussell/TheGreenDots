@@ -11,7 +11,9 @@ public class ReportEmailHtmlGenerator
         string reportPeriod,
         int trackedCount,
         List<EmployeePresenceBreakdown> employees,
-        DateTime generatedAt)
+        DateTime generatedAt,
+        DateTimeOffset? periodStart = null,
+        DateTimeOffset? periodEnd = null)
     {
         var html = new StringBuilder();
 
@@ -233,7 +235,7 @@ public class ReportEmailHtmlGenerator
                                         <!-- 24-hour timeline bar -->
                                         <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" width=""100%"" style=""height: 18px; border-radius: 3px; overflow: hidden; border: 1px solid {borderColor};"">
                                             <tr>
-                                                {GenerateTimelineSegments(breakdown)}
+                                                {GenerateChronologicalTimelineSegments(employee.PresenceRecords)}
                                             </tr>
                                         </table>
                                     </td>
@@ -244,6 +246,57 @@ public class ReportEmailHtmlGenerator
                             </table>
                         </td>
                     </tr>";
+    }
+
+    private string GenerateChronologicalTimelineSegments(List<ProjectCallisto.Domain.Organisations.PresenceHistory> presenceRecords)
+    {
+        if (!presenceRecords.Any())
+        {
+            // No data - show full offline bar
+            return @"<td style=""width: 100%; background-color: #d1d5db; height: 18px;""></td>";
+        }
+
+        var segments = new StringBuilder();
+        var sortedRecords = presenceRecords.OrderBy(r => r.RecordedAt).ToList();
+
+        // Assume the period spans 24 hours
+        var periodStart = sortedRecords.First().RecordedAt.Date;
+        var periodEnd = periodStart.AddDays(1);
+        var totalMinutes = 24 * 60.0;
+
+        // Build segments from presence records
+        for (int i = 0; i < sortedRecords.Count; i++)
+        {
+            var current = sortedRecords[i];
+            var nextRecord = i < sortedRecords.Count - 1 ? sortedRecords[i + 1] : null;
+
+            // Calculate segment duration
+            var segmentStart = current.RecordedAt;
+            var segmentEnd = nextRecord?.RecordedAt ?? periodEnd;
+
+            var durationMinutes = (segmentEnd - segmentStart).TotalMinutes;
+            var widthPercent = (durationMinutes / totalMinutes) * 100.0;
+
+            // Only show segments that are visible (> 0.5%)
+            if (widthPercent < 0.5) continue;
+
+            var color = GetPresenceColor(current.Availability);
+            segments.Append($@"<td style=""width: {widthPercent:F2}%; background-color: {color}; height: 18px;""></td>");
+        }
+
+        return segments.ToString();
+    }
+
+    private string GetPresenceColor(string availability)
+    {
+        return availability.ToLowerInvariant() switch
+        {
+            "available" or "availableidle" => "#22c55e", // Green
+            "busy" or "busyidle" => "#ef4444", // Red
+            "away" => "#f59e0b", // Orange
+            "donotdisturb" => "#8b5cf6", // Purple
+            _ => "#d1d5db" // Gray (Offline/Unknown)
+        };
     }
 
     private string GenerateTimelineSegments(TimeBreakdown breakdown)

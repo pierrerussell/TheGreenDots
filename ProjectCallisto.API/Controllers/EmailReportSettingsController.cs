@@ -227,7 +227,9 @@ public class EmailReportSettingsController : ControllerBase
                     reportPeriod,
                     report.TotalMembers,
                     report.Employees,
-                    DateTime.UtcNow);
+                    DateTime.UtcNow,
+                    report.StartDate,
+                    report.EndDate);
 
                 subject = $"[Sample] Daily Presence Report - {reportPeriod}";
                 break;

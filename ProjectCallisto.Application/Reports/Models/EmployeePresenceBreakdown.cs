@@ -1,3 +1,5 @@
+using ProjectCallisto.Domain.Organisations;
+
 namespace ProjectCallisto.Application.Reports.Models;
 
 public record EmployeePresenceBreakdown
@@ -12,4 +14,7 @@ public record EmployeePresenceBreakdown
     public double OvertimeHours { get; init; }
 
     public List<PresenceInsight> Insights { get; init; } = new();
+
+    // Raw presence records for building chronological timelines
+    public List<PresenceHistory> PresenceRecords { get; init; } = new();
 }
