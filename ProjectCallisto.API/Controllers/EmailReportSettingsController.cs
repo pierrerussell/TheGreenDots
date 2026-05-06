@@ -245,7 +245,8 @@ public class EmailReportSettingsController : ControllerBase
                     reportPeriod,
                     report.TotalMembers,
                     report.Employees,
-                    DateTime.UtcNow);
+                    DateTime.UtcNow,
+                    report.WorkingHours);
 
                 subject = $"[Sample] Weekly Presence Report - {reportPeriod}";
                 break;
@@ -261,7 +262,8 @@ public class EmailReportSettingsController : ControllerBase
                     reportPeriod,
                     report.TotalMembers,
                     report.Employees,
-                    DateTime.UtcNow);
+                    DateTime.UtcNow,
+                    report.WorkingHours);
 
                 subject = $"[Sample] Monthly Presence Report - {reportPeriod}";
                 break;

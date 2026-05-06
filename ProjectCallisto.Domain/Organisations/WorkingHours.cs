@@ -61,6 +61,35 @@ public class WorkingHours
         var timeOfDay = TimeOnly.FromDateTime(localTime.DateTime);
         return timeOfDay >= StartTime && timeOfDay <= EndTime;
     }
+
+    /// <summary>
+    /// Calculates the total expected working hours per week based on configured working days and times
+    /// </summary>
+    public double GetExpectedHoursPerWeek()
+    {
+        // Calculate hours per day
+        var hoursPerDay = (EndTime - StartTime).TotalHours;
+
+        // Count working days
+        var workingDayCount = 0;
+        if (WorkingDays.HasFlag(WorkingDaysFlags.Monday)) workingDayCount++;
+        if (WorkingDays.HasFlag(WorkingDaysFlags.Tuesday)) workingDayCount++;
+        if (WorkingDays.HasFlag(WorkingDaysFlags.Wednesday)) workingDayCount++;
+        if (WorkingDays.HasFlag(WorkingDaysFlags.Thursday)) workingDayCount++;
+        if (WorkingDays.HasFlag(WorkingDaysFlags.Friday)) workingDayCount++;
+        if (WorkingDays.HasFlag(WorkingDaysFlags.Saturday)) workingDayCount++;
+        if (WorkingDays.HasFlag(WorkingDaysFlags.Sunday)) workingDayCount++;
+
+        return hoursPerDay * workingDayCount;
+    }
+
+    /// <summary>
+    /// Calculates the total expected working hours per day based on configured working times
+    /// </summary>
+    public double GetExpectedHoursPerDay()
+    {
+        return (EndTime - StartTime).TotalHours;
+    }
 }
 
 [Flags]

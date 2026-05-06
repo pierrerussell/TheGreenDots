@@ -78,6 +78,7 @@ public class ReportCalculationService : IReportCalculationService
             StartDate = periodStart,
             EndDate = periodEnd,
             Timezone = organisation.Timezone!,
+            WorkingHours = organisation.WorkingHours,
             Employees = employees,
             TotalMembers = employees.Count
         };
@@ -107,6 +108,7 @@ public class ReportCalculationService : IReportCalculationService
             StartDate = periodStart,
             EndDate = periodEnd,
             Timezone = organisation.Timezone!,
+            WorkingHours = organisation.WorkingHours,
             Employees = employees,
             TotalMembers = employees.Count
         };
@@ -186,18 +188,16 @@ public class ReportCalculationService : IReportCalculationService
                 ? recordsByMember[member.Id]
                 : new List<PresenceHistory>();
 
-            // Filter records that fall within working hours
-            var workingHoursRecords = memberRecords
-                .Where(r => organisation.WorkingHours!.IsWithinWorkingHours(r.RecordedAt, organisation.Timezone!))
-                .ToList();
-
-            // Calculate working hours breakdown (filtered records)
-            var workingHoursBreakdown = _calculator.Calculate(
-                workingHoursRecords,
+            // Calculate working hours breakdown - clips segments to only count time within working hour windows
+            // Handles records that span working hour boundaries (e.g., 8:30 AM - 9:30 AM when work starts at 9:00 AM)
+            var workingHoursBreakdown = _calculator.CalculateForWorkingHours(
+                memberRecords,
+                organisation.WorkingHours!,
+                organisation.Timezone!,
                 periodStart,
                 periodEnd);
 
-            // Calculate full period breakdown (all records)
+            // Calculate full period breakdown (all records) - fills entire period with segments
             var fullPeriodBreakdown = _calculator.Calculate(
                 memberRecords,
                 periodStart,

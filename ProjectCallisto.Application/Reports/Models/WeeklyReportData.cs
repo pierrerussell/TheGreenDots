@@ -1,3 +1,5 @@
+using ProjectCallisto.Domain.Organisations;
+
 namespace ProjectCallisto.Application.Reports.Models;
 
 public record WeeklyReportData
@@ -7,6 +9,7 @@ public record WeeklyReportData
     public DateTimeOffset StartDate { get; init; }
     public DateTimeOffset EndDate { get; init; }
     public string Timezone { get; init; } = string.Empty;
+    public WorkingHours? WorkingHours { get; init; }
     public List<EmployeePresenceBreakdown> Employees { get; init; } = new();
     public int TotalMembers { get; init; }
 }

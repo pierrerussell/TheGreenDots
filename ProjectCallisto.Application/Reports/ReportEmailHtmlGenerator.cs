@@ -145,19 +145,19 @@ public class ReportEmailHtmlGenerator
                                     <td>
                                         <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" width=""100%"">
                                             <tr>
-                                                <td style=""width: 0%; text-align: left;"">
+                                                <td style=""width: 25%; text-align: left;"">
                                                     <span style=""color: #9ca3af; font-size: 9px; font-family: 'Courier New', monospace;"">00:00</span>
                                                 </td>
                                                 <td style=""width: 25%; text-align: center;"">
                                                     <span style=""color: #9ca3af; font-size: 9px; font-family: 'Courier New', monospace;"">06:00</span>
                                                 </td>
-                                                <td style=""width: 50%; text-align: center;"">
+                                                <td style=""width: 25%; text-align: center;"">
                                                     <span style=""color: #9ca3af; font-size: 9px; font-family: 'Courier New', monospace;"">12:00</span>
                                                 </td>
-                                                <td style=""width: 75%; text-align: center;"">
+                                                <td style=""width: 25%; text-align: center;"">
                                                     <span style=""color: #9ca3af; font-size: 9px; font-family: 'Courier New', monospace;"">18:00</span>
                                                 </td>
-                                                <td style=""width: 100%; text-align: right;"">
+                                                <td style=""width: 0%; text-align: right;"">
                                                     <span style=""color: #9ca3af; font-size: 9px; font-family: 'Courier New', monospace;"">23:59</span>
                                                 </td>
                                             </tr>
@@ -264,7 +264,7 @@ public class ReportEmailHtmlGenerator
         var periodEnd = periodStart.AddDays(1);
         var totalMinutes = 24 * 60.0;
 
-        // Build segments from presence records
+        // Build segments from presence records with hourly markers
         for (int i = 0; i < sortedRecords.Count; i++)
         {
             var current = sortedRecords[i];
@@ -281,7 +281,14 @@ public class ReportEmailHtmlGenerator
             if (widthPercent < 0.5) continue;
 
             var color = GetPresenceColor(current.Availability);
-            segments.Append($@"<td style=""width: {widthPercent:F2}%; background-color: {color}; height: 18px;""></td>");
+
+            // Check if this segment starts at an hour boundary (within 2 minutes)
+            var segmentStartMinute = (segmentStart - periodStart).TotalMinutes;
+            var hoursSinceMidnight = segmentStartMinute / 60.0;
+            var isNearHourBoundary = Math.Abs(hoursSinceMidnight - Math.Round(hoursSinceMidnight)) < (2.0 / 60.0);
+            var borderStyle = isNearHourBoundary && i > 0 ? "border-left: 1px solid rgba(255,255,255,0.3);" : "";
+
+            segments.Append($@"<td style=""width: {widthPercent:F2}%; background-color: {color}; height: 18px; {borderStyle}""></td>");
         }
 
         return segments.ToString();
@@ -329,7 +336,8 @@ public class ReportEmailHtmlGenerator
         string reportPeriod,
         int trackedCount,
         List<EmployeePresenceBreakdown> employees,
-        DateTime generatedAt)
+        DateTime generatedAt,
+        ProjectCallisto.Domain.Organisations.WorkingHours? workingHours = null)
     {
         var html = new StringBuilder();
 
@@ -399,7 +407,7 @@ public class ReportEmailHtmlGenerator
 
         foreach (var employee in employees)
         {
-            html.Append(GenerateWeeklyEmployeeRow(employee));
+            html.Append(GenerateWeeklyEmployeeRow(employee, workingHours));
         }
 
         html.Append($@"
@@ -431,9 +439,9 @@ public class ReportEmailHtmlGenerator
         return html.ToString();
     }
 
-    private string GenerateWeeklyEmployeeRow(EmployeePresenceBreakdown employee)
+    private string GenerateWeeklyEmployeeRow(EmployeePresenceBreakdown employee, ProjectCallisto.Domain.Organisations.WorkingHours? workingHours)
     {
-        var workingHours = employee.WorkingHoursBreakdown;
+        var workingHoursBreakdown = employee.WorkingHoursBreakdown;
         var fullWeek = employee.FullWeekBreakdown;
         var hasInsights = employee.Insights.Any();
 
@@ -445,9 +453,13 @@ public class ReportEmailHtmlGenerator
             ? $@"<p style=""margin: 4px 0 0 0; color: #d97706; font-size: 10px; font-weight: 600;"">⚠️ {string.Join(", ", employee.Insights.Select(i => i.Message))}</p>"
             : "";
 
-        var overtimeText = employee.OvertimeHours > 0
-            ? $@" <span style=""font-size: 11px; font-weight: 600; color: #d97706;"">(+{employee.OvertimeHours:F1}h)</span>"
-            : "";
+        // Calculate expected hours and format display text
+        var expectedHoursPerWeek = workingHours?.GetExpectedHoursPerWeek() ?? 40.0; // Default to 40 if not available
+        var totalOnlineHours = workingHoursBreakdown.TotalHours - workingHoursBreakdown.OfflineHours;
+        var workingHoursDisplayText = $"{totalOnlineHours:F1}h / {expectedHoursPerWeek:F0}h";
+
+        var totalFullWeekOnlineHours = fullWeek.TotalHours - fullWeek.OfflineHours;
+        var fullWeekDisplayText = $"{totalFullWeekOnlineHours:F1}h / 168h";
 
         return $@"
                     <tr>
@@ -463,27 +475,33 @@ public class ReportEmailHtmlGenerator
 
                                     <!-- Working Hours Column -->
                                     <td style=""width: 36%; vertical-align: middle; padding: 0 8px;"">
-                                        <p style=""margin: 0 0 6px 0; color: #0f5132; font-size: 13px; font-weight: 700;"">{workingHours.TotalHours:F1}h</p>
+                                        <p style=""margin: 0 0 6px 0; color: #0f5132; font-size: 13px; font-weight: 700;"">{workingHoursDisplayText}</p>
                                         <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" width=""100%"" style=""height: 20px; border-radius: 4px; overflow: hidden; border: 1px solid {borderColor};"">
                                             <tr>
-                                                {GenerateStackedBar(workingHours)}
+                                                {GenerateStackedBar(workingHoursBreakdown)}
                                             </tr>
                                         </table>
                                         <p style=""margin: 4px 0 0 0; color: #6b7280; font-size: 10px; line-height: 1.3;"">
-                                            {workingHours.AvailableHours:F1}h · {workingHours.BusyHours:F1}h · {workingHours.AwayHours:F1}h · {workingHours.DoNotDisturbHours:F1}h
+                                            <span style=""color: #22c55e;"">●</span> {workingHoursBreakdown.AvailableHours:F1}h
+                                            <span style=""color: #ef4444;"">●</span> {workingHoursBreakdown.BusyHours:F1}h
+                                            <span style=""color: #f59e0b;"">●</span> {workingHoursBreakdown.AwayHours:F1}h
+                                            <span style=""color: #8b5cf6;"">●</span> {workingHoursBreakdown.DoNotDisturbHours:F1}h
                                         </p>
                                     </td>
 
                                     <!-- Full Week Column -->
                                     <td style=""width: 36%; vertical-align: middle; padding: 0 8px;"">
-                                        <p style=""margin: 0 0 6px 0; color: #6b7280; font-size: 13px; font-weight: 700;"">{fullWeek.TotalHours:F1}h{overtimeText}</p>
+                                        <p style=""margin: 0 0 6px 0; color: #6b7280; font-size: 13px; font-weight: 700;"">{fullWeekDisplayText}</p>
                                         <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" width=""100%"" style=""height: 20px; border-radius: 4px; overflow: hidden; border: 1px solid {borderColor};"">
                                             <tr>
                                                 {GenerateStackedBar(fullWeek)}
                                             </tr>
                                         </table>
                                         <p style=""margin: 4px 0 0 0; color: #6b7280; font-size: 10px; line-height: 1.3;"">
-                                            {fullWeek.AvailableHours:F1}h · {fullWeek.BusyHours:F1}h · {fullWeek.AwayHours:F1}h · {fullWeek.DoNotDisturbHours:F1}h
+                                            <span style=""color: #22c55e;"">●</span> {fullWeek.AvailableHours:F1}h
+                                            <span style=""color: #ef4444;"">●</span> {fullWeek.BusyHours:F1}h
+                                            <span style=""color: #f59e0b;"">●</span> {fullWeek.AwayHours:F1}h
+                                            <span style=""color: #8b5cf6;"">●</span> {fullWeek.DoNotDisturbHours:F1}h
                                         </p>
                                     </td>
                                 </tr>
@@ -519,10 +537,11 @@ public class ReportEmailHtmlGenerator
         string reportPeriod,
         int trackedCount,
         List<EmployeePresenceBreakdown> employees,
-        DateTime generatedAt)
+        DateTime generatedAt,
+        ProjectCallisto.Domain.Organisations.WorkingHours? workingHours = null)
     {
         // Monthly report uses same structure as weekly, just different title and period
-        var html = GenerateWeeklyReportHtml(orgName, reportPeriod, trackedCount, employees, generatedAt);
+        var html = GenerateWeeklyReportHtml(orgName, reportPeriod, trackedCount, employees, generatedAt, workingHours);
         return html.Replace("Weekly Presence Report", "Monthly Presence Report")
                    .Replace("weekly summary", "monthly summary");
     }

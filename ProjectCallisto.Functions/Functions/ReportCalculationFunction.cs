@@ -72,7 +72,8 @@ public class ReportCalculationFunction
                     reportPeriod,
                     report.TotalMembers,
                     report.Employees,
-                    DateTime.UtcNow);
+                    DateTime.UtcNow,
+                    report.WorkingHours);
 
                 subject = $"Weekly Presence Report - {reportPeriod}";
                 break;
@@ -88,7 +89,8 @@ public class ReportCalculationFunction
                     reportPeriod,
                     report.TotalMembers,
                     report.Employees,
-                    DateTime.UtcNow);
+                    DateTime.UtcNow,
+                    report.WorkingHours);
 
                 subject = $"Monthly Presence Report - {reportPeriod}";
                 break;
