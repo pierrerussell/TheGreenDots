@@ -321,4 +321,254 @@ public class PresenceBreakdownCalculatorTests
         Assert.Equal(1.5, result.AvailableHours);
         Assert.Equal(0, result.BusyHours);
     }
+
+    /// <summary>
+    /// BUG FIX TEST: Segments should be clipped to period boundaries (e.g., midnight for daily reports)
+    /// This test would have caught the bug where records at 11:30 PM with next record at 12:30 AM
+    /// were extending into the next day instead of being clipped at midnight.
+    /// </summary>
+    [Fact]
+    public void Calculate_ClipsSegmentsToPeriodEnd_WhenNextRecordIsAfterPeriodEnd()
+    {
+        // Arrange - Daily report from midnight to midnight
+        var periodStart = new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero);
+        var periodEnd = new DateTimeOffset(2026, 5, 2, 0, 0, 0, TimeSpan.Zero); // Midnight next day
+
+        var records = new List<PresenceHistory>
+        {
+            // Record at 11:30 PM
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 1, 23, 30, 0, TimeSpan.Zero), Availability = "Available" },
+            // Next record at 12:30 AM (next day) - should be clipped
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 2, 0, 30, 0, TimeSpan.Zero), Availability = "Busy" }
+        };
+
+        // Act
+        var result = _calculator.Calculate(records, periodStart, periodEnd);
+
+        // Assert
+        // Should only count from 11:30 PM to midnight (30 minutes = 0.5 hours), NOT to 12:30 AM
+        Assert.True(result.TotalHours <= 24, $"Total hours should not exceed 24, but was {result.TotalHours}");
+        Assert.Equal(0.5, result.AvailableHours, 2); // 11:30 PM to midnight
+        Assert.Equal(0, result.BusyHours); // Record at 12:30 AM is outside period
+    }
+
+    /// <summary>
+    /// BUG FIX TEST: Records spanning period start should be clipped correctly
+    /// </summary>
+    [Fact]
+    public void Calculate_ClipsSegmentsToPeriodStart_WhenRecordIsBeforePeriodStart()
+    {
+        // Arrange - Period starts at 9 AM
+        var periodStart = new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero);
+        var periodEnd = new DateTimeOffset(2026, 5, 1, 17, 0, 0, TimeSpan.Zero);
+
+        var records = new List<PresenceHistory>
+        {
+            // Record at 8:00 AM (before period start)
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero), Availability = "Available" },
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 1, 10, 0, 0, TimeSpan.Zero), Availability = "Busy" }
+        };
+
+        // Act
+        var result = _calculator.Calculate(records, periodStart, periodEnd);
+
+        // Assert
+        // Should have offline from 9-10 (implicit), then busy from 10-17
+        Assert.Equal(8, result.TotalHours);
+        Assert.Equal(1, result.OfflineHours); // 9-10 AM (gap from period start to first record)
+        Assert.Equal(7, result.BusyHours); // 10-17
+    }
+
+    /// <summary>
+    /// BUG FIX TEST: CalculateForWorkingHours should only count time within working hour windows
+    /// This would have caught the bug where working hours showed 168h total instead of actual online hours
+    /// </summary>
+    [Fact]
+    public void CalculateForWorkingHours_OnlyCountsTimeWithinWorkingHourWindows()
+    {
+        // Arrange - Working hours 9 AM - 5 PM, Mon-Fri
+        var workingHours = new WorkingHours(Guid.NewGuid())
+        {
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(17, 0),
+            WorkingDays = WorkingDaysFlags.Monday | WorkingDaysFlags.Tuesday |
+                          WorkingDaysFlags.Wednesday | WorkingDaysFlags.Thursday |
+                          WorkingDaysFlags.Friday
+        };
+
+        // Week period: Monday May 5 to Sunday May 11, 2026
+        var periodStart = new DateTimeOffset(2026, 5, 4, 0, 0, 0, TimeSpan.Zero); // Monday midnight
+        var periodEnd = new DateTimeOffset(2026, 5, 11, 0, 0, 0, TimeSpan.Zero); // Next Monday midnight
+
+        var records = new List<PresenceHistory>
+        {
+            // Monday 9 AM - Available
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 4, 9, 0, 0, TimeSpan.Zero), Availability = "Available" },
+            // Monday 10 AM - Change status (1 hour available)
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 4, 10, 0, 0, TimeSpan.Zero), Availability = "Busy" },
+            // Monday 11 AM - Offline
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 4, 11, 0, 0, TimeSpan.Zero), Availability = "Offline" }
+        };
+
+        // Act
+        var result = _calculator.CalculateForWorkingHours(records, workingHours, "UTC", periodStart, periodEnd);
+
+        // Assert
+        // Should count: 9-10 Available (1h), 10-11 Busy (1h) = 2h total
+        // NOT 40 hours or 168 hours which was the bug
+        Assert.True(result.TotalHours < 5, $"Total hours should be small (2h), but was {result.TotalHours}");
+        Assert.Equal(1, result.AvailableHours, 1);
+        Assert.Equal(1, result.BusyHours, 1);
+    }
+
+    /// <summary>
+    /// BUG FIX TEST: Records that start before working hours should count from working hours start
+    /// Example: Record at 8:30 AM when work starts at 9:00 AM should count from 9:00 AM
+    /// </summary>
+    [Fact]
+    public void CalculateForWorkingHours_ClipsRecordStartingBeforeWorkingHours()
+    {
+        // Arrange - Working hours 9 AM - 5 PM
+        var workingHours = new WorkingHours(Guid.NewGuid())
+        {
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(17, 0),
+            WorkingDays = WorkingDaysFlags.Monday | WorkingDaysFlags.Tuesday |
+                          WorkingDaysFlags.Wednesday | WorkingDaysFlags.Thursday |
+                          WorkingDaysFlags.Friday
+        };
+
+        var periodStart = new DateTimeOffset(2026, 5, 5, 0, 0, 0, TimeSpan.Zero); // Tuesday
+        var periodEnd = new DateTimeOffset(2026, 5, 6, 0, 0, 0, TimeSpan.Zero);
+
+        var records = new List<PresenceHistory>
+        {
+            // Record at 8:30 AM (before working hours start)
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 5, 8, 30, 0, TimeSpan.Zero), Availability = "Available" },
+            // Next record at 9:30 AM
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 5, 9, 30, 0, TimeSpan.Zero), Availability = "Busy" },
+            // Another record at 10 AM to avoid offline gap threshold
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 5, 10, 0, 0, TimeSpan.Zero), Availability = "Offline" }
+        };
+
+        // Act
+        var result = _calculator.CalculateForWorkingHours(records, workingHours, "UTC", periodStart, periodEnd);
+
+        // Assert
+        // Should count: 9:00-9:30 Available (0.5h) + 9:30-10:00 Busy (0.5h) = 1.0h total
+        // NOT 8:30-10:00 which would be 1.5 hours
+        Assert.True(result.TotalHours >= 0.5 && result.TotalHours <= 1.5,
+            $"Total should be around 1.0h, but was {result.TotalHours}");
+        Assert.True(result.AvailableHours >= 0.5 && result.AvailableHours <= 1.0,
+            $"Available should be ~0.5h, but was {result.AvailableHours}");
+    }
+
+    /// <summary>
+    /// BUG FIX TEST: Records that extend past working hours should be clipped at end time
+    /// Example: Record at 4:45 PM when work ends at 5:00 PM should only count until 5:00 PM
+    /// </summary>
+    [Fact]
+    public void CalculateForWorkingHours_ClipsRecordExtendingPastWorkingHours()
+    {
+        // Arrange - Working hours 9 AM - 5 PM
+        var workingHours = new WorkingHours(Guid.NewGuid())
+        {
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(17, 0),
+            WorkingDays = WorkingDaysFlags.Monday | WorkingDaysFlags.Tuesday |
+                          WorkingDaysFlags.Wednesday | WorkingDaysFlags.Thursday |
+                          WorkingDaysFlags.Friday
+        };
+
+        var periodStart = new DateTimeOffset(2026, 5, 5, 0, 0, 0, TimeSpan.Zero);
+        var periodEnd = new DateTimeOffset(2026, 5, 6, 0, 0, 0, TimeSpan.Zero);
+
+        var records = new List<PresenceHistory>
+        {
+            // Record at 4:45 PM
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 5, 16, 45, 0, TimeSpan.Zero), Availability = "Available" },
+            // Next record at 5:30 PM (after working hours)
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 5, 17, 30, 0, TimeSpan.Zero), Availability = "Busy" }
+        };
+
+        // Act
+        var result = _calculator.CalculateForWorkingHours(records, workingHours, "UTC", periodStart, periodEnd);
+
+        // Assert
+        // Should only count 4:45-5:00 PM (15 minutes = 0.25 hours), NOT 4:45-5:30 PM
+        Assert.Equal(0.25, result.TotalHours, 2);
+        Assert.Equal(0.25, result.AvailableHours, 2);
+    }
+
+    /// <summary>
+    /// BUG FIX TEST: CalculateForWorkingHours should handle records spanning multiple working days
+    /// </summary>
+    [Fact]
+    public void CalculateForWorkingHours_HandlesRecordsSpanningMultipleDays()
+    {
+        // Arrange - Working hours 9 AM - 5 PM, Mon-Fri
+        var workingHours = new WorkingHours(Guid.NewGuid())
+        {
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(17, 0),
+            WorkingDays = WorkingDaysFlags.Monday | WorkingDaysFlags.Tuesday |
+                          WorkingDaysFlags.Wednesday | WorkingDaysFlags.Thursday |
+                          WorkingDaysFlags.Friday
+        };
+
+        var periodStart = new DateTimeOffset(2026, 5, 4, 0, 0, 0, TimeSpan.Zero); // Monday
+        var periodEnd = new DateTimeOffset(2026, 5, 11, 0, 0, 0, TimeSpan.Zero); // Next Monday
+
+        var records = new List<PresenceHistory>
+        {
+            // Monday 2 PM
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 4, 14, 0, 0, TimeSpan.Zero), Availability = "Available" },
+            // Tuesday 10 AM (next day)
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 5, 10, 0, 0, TimeSpan.Zero), Availability = "Busy" }
+        };
+
+        // Act
+        var result = _calculator.CalculateForWorkingHours(records, workingHours, "UTC", periodStart, periodEnd);
+
+        // Assert
+        // Should count: Monday 2-5 PM (3 hours) + Tuesday 9-10 AM (1 hour) = 4 hours
+        Assert.Equal(4, result.TotalHours, 1);
+        Assert.Equal(3, result.AvailableHours, 1); // Monday afternoon
+        Assert.Equal(1, result.BusyHours, 1); // Tuesday morning
+    }
+
+    /// <summary>
+    /// BUG FIX TEST: Records on non-working days should not be counted
+    /// </summary>
+    [Fact]
+    public void CalculateForWorkingHours_ExcludesNonWorkingDays()
+    {
+        // Arrange - Working hours 9 AM - 5 PM, Mon-Fri only
+        var workingHours = new WorkingHours(Guid.NewGuid())
+        {
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(17, 0),
+            WorkingDays = WorkingDaysFlags.Monday | WorkingDaysFlags.Tuesday |
+                          WorkingDaysFlags.Wednesday | WorkingDaysFlags.Thursday |
+                          WorkingDaysFlags.Friday
+        };
+
+        var periodStart = new DateTimeOffset(2026, 5, 9, 0, 0, 0, TimeSpan.Zero); // Saturday
+        var periodEnd = new DateTimeOffset(2026, 5, 11, 0, 0, 0, TimeSpan.Zero); // Monday
+
+        var records = new List<PresenceHistory>
+        {
+            // Saturday 10 AM (non-working day)
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 9, 10, 0, 0, TimeSpan.Zero), Availability = "Available" },
+            // Sunday 11 AM (non-working day)
+            new() { RecordedAt = new DateTimeOffset(2026, 5, 10, 11, 0, 0, TimeSpan.Zero), Availability = "Busy" }
+        };
+
+        // Act
+        var result = _calculator.CalculateForWorkingHours(records, workingHours, "UTC", periodStart, periodEnd);
+
+        // Assert
+        // Should count 0 hours (Saturday and Sunday are not working days)
+        Assert.Equal(0, result.TotalHours, 1);
+    }
 }
