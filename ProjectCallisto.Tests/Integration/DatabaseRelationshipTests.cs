@@ -155,7 +155,7 @@ public class DatabaseRelationshipTests : IntegrationTestBase
             .FirstAsync(o => o.Id == organisation.Id);
 
         loadedOrg.WorkingHours.Should().BeNull();
-        loadedOrg.EmailReportSettings.Should().BeNull();
+        loadedOrg.EmailReportSettings.Should().BeEmpty(); // EmailReportSettings is initialized as empty list, not null
     }
 
     [Fact]

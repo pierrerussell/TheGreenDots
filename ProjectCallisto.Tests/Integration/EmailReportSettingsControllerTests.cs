@@ -1,7 +1,11 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using ProjectCallisto.API.Controllers;
+using ProjectCallisto.Application.Emails;
+using ProjectCallisto.Application.Queues;
+using ProjectCallisto.Application.Reports;
 using ProjectCallisto.Domain.Organisations;
 using Xunit;
 
@@ -10,10 +14,18 @@ namespace ProjectCallisto.Tests.Integration;
 public class EmailReportSettingsControllerTests : IntegrationTestBase
 {
     private readonly EmailReportSettingsController _controller;
+    private readonly Mock<IReportCalculationService> _reportService;
+    private readonly Mock<ReportEmailHtmlGenerator> _htmlGenerator;
+    private readonly Mock<IQueueService<EmailMessage>> _emailQueue;
 
     public EmailReportSettingsControllerTests()
     {
-        _controller = new EmailReportSettingsController(DbContext);
+        // Create mock dependencies
+        _reportService = new Mock<IReportCalculationService>();
+        _htmlGenerator = new Mock<ReportEmailHtmlGenerator>();
+        _emailQueue = new Mock<IQueueService<EmailMessage>>();
+
+        _controller = new EmailReportSettingsController(DbContext, _reportService.Object, _htmlGenerator.Object, _emailQueue.Object);
     }
 
     [Fact]

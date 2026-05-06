@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ProjectCallisto.Application.Reports;
 using ProjectCallisto.Application.Reports.Models;
 using ProjectCallisto.Domain.Organisations;
@@ -16,7 +18,8 @@ public class ReportCalculationServiceTests : IntegrationTestBase
     {
         _calculator = new PresenceBreakdownCalculator();
         _insightService = new InsightDetectionService();
-        _service = new ReportCalculationService(DbContext, _calculator, _insightService);
+        var logger = NullLogger<ReportCalculationService>.Instance;
+        _service = new ReportCalculationService(DbContext, _calculator, _insightService, logger);
     }
 
     [Fact]
