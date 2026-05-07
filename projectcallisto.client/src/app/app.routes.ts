@@ -55,6 +55,12 @@ export const routes: Routes = [
         canActivate: [adminGuard],
       },
       {
+        path: 'pricing',
+        loadComponent: () =>
+          import('./pages/organisation/subscription/pricing.component').then(m => m.PricingComponent),
+        canActivate: [adminGuard],
+      },
+      {
         path: 'email-reports',
         loadComponent: () =>
           import('./pages/organisation/reports/email-report-settings.component').then(m => m.EmailReportSettingsComponent),
