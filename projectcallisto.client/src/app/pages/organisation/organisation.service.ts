@@ -6,6 +6,16 @@ export interface Organisation {
   name: string;
   tenantId: string;
   createdAt: string;
+  subscription: Subscription;
+
+}
+
+export interface Subscription {
+  status: string;
+  paidSeats: number;
+  trialEndsAt: string | undefined;
+  stripeSubscriptionId: string | undefined;
+
 }
 
 export interface TeamMember {
