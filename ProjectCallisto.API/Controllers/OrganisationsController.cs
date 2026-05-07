@@ -16,11 +16,13 @@ public class OrganisationsController : ControllerBase
 {
     private readonly AppDbContext _dbContext;
     private readonly IMicrosoftGraphService _graphService;
+    private readonly ILogger<OrganisationsController> _logger;
 
-    public OrganisationsController(AppDbContext dbContext, IMicrosoftGraphService graphService)
+    public OrganisationsController(AppDbContext dbContext, IMicrosoftGraphService graphService, ILogger<OrganisationsController> logger)
     {
         _dbContext = dbContext;
         _graphService = graphService;
+        _logger = logger;
     }
 
     [HttpGet]

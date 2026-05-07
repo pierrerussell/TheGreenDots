@@ -13,10 +13,13 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _dbContext;
     private readonly IMemoryCache _cache;
-    public AuthController(AppDbContext dbContext,  IMemoryCache cache)
+    private readonly ILogger<AuthController> _logger;
+
+    public AuthController(AppDbContext dbContext, IMemoryCache cache, ILogger<AuthController> logger)
     {
         _dbContext = dbContext;
         _cache = cache;
+        _logger = logger;
     }
     
     [Authorize]
@@ -71,7 +74,48 @@ public class AuthController : ControllerBase
     [HttpGet("signin")]
     public IActionResult SignIn([FromQuery] string? returnUrl = "/")
     {
-        return Challenge(new AuthenticationProperties { RedirectUri = returnUrl });
+        var validatedUrl = ValidateAndSanitizeReturnUrl(returnUrl);
+        return Challenge(new AuthenticationProperties { RedirectUri = validatedUrl });
+    }
+
+    /// <summary>
+    /// Validates return URL to prevent open redirect attacks.
+    /// Only allows relative URLs starting with '/'. Rejects absolute URLs and protocol-relative URLs.
+    /// </summary>
+    private string ValidateAndSanitizeReturnUrl(string? returnUrl)
+    {
+        // Default to home if null or empty
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return "/";
+        }
+
+        // Trim whitespace
+        returnUrl = returnUrl.Trim();
+
+        // Only allow relative URLs starting with '/'
+        if (!returnUrl.StartsWith('/'))
+        {
+            _logger.LogWarning("Rejected return URL (not relative): {ReturnUrl}", returnUrl);
+            return "/";
+        }
+
+        // Reject protocol-relative URLs (//evil.com)
+        if (returnUrl.StartsWith("//"))
+        {
+            _logger.LogWarning("Rejected protocol-relative return URL: {ReturnUrl}", returnUrl);
+            return "/";
+        }
+
+        // Check for suspicious patterns (URLs with protocols embedded)
+        if (returnUrl.Contains("://", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Rejected return URL with embedded protocol: {ReturnUrl}", returnUrl);
+            return "/";
+        }
+
+        // Valid relative URL
+        return returnUrl;
     }
 
     [HttpGet("signout")]

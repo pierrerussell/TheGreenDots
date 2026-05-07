@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using ProjectCallisto.API.Controllers;
 using ProjectCallisto.Application.Microsoft;
@@ -13,10 +14,13 @@ public class OrganisationsControllerTimezoneTests : IntegrationTestBase
     private readonly OrganisationsController _controller;
     private readonly Mock<IMicrosoftGraphService> _mockGraphService;
 
+
     public OrganisationsControllerTimezoneTests()
     {
         _mockGraphService = new Mock<IMicrosoftGraphService>();
-        _controller = new OrganisationsController(DbContext, _mockGraphService.Object);
+        var nullLogger = new NullLogger<OrganisationsController>();
+        _controller = new OrganisationsController(DbContext, _mockGraphService.Object, nullLogger);
+
     }
 
     [Fact]
