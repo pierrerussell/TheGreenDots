@@ -16,10 +16,10 @@ public class Organisation
 
     }
     
-    public Guid Id { get;  set; }
-    public string Name  { get;  set; }
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
     // Id of the microsoft entra tenant
-    public string TenantId  { get;  set; }
+    public string TenantId { get; set; } = null!;
     // Id of the Active Access token used to connect to this tenant
     public Guid ActiveConnectionId  { get;  set; }
     public string? StripeCustomerId  { get;  set; }

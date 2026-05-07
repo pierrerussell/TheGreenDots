@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Queues;
 using ProjectCallisto.Application.Reports;
+using ProjectCallisto.Application.Validation;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.Domain.Users;
 using ProjectCallisto.EfCore;
@@ -107,6 +108,13 @@ public class EmailReportSettingsController : ControllerBase
         if (request.DayOfMonth.HasValue && (request.DayOfMonth < 1 || request.DayOfMonth > 28))
             return BadRequest("DayOfMonth must be between 1 and 28");
 
+        // Validate all recipient emails
+        foreach (var recipient in request.Recipients)
+        {
+            if (!EmailValidator.IsValidEmail(recipient.Email))
+                return BadRequest($"Invalid email address: {recipient.Email}. Email addresses must be properly formatted and cannot contain control characters or newlines.");
+        }
+
         var settings = new EmailReportSettings(orgId);
 
         // Set properties
@@ -145,6 +153,13 @@ public class EmailReportSettingsController : ControllerBase
 
         if (request.DayOfMonth.HasValue && (request.DayOfMonth < 1 || request.DayOfMonth > 28))
             return BadRequest("DayOfMonth must be between 1 and 28");
+
+        // Validate all recipient emails
+        foreach (var recipient in request.Recipients)
+        {
+            if (!EmailValidator.IsValidEmail(recipient.Email))
+                return BadRequest($"Invalid email address: {recipient.Email}. Email addresses must be properly formatted and cannot contain control characters or newlines.");
+        }
 
         var settings = await _dbContext.EmailReportSettings
             .FirstOrDefaultAsync(s => s.Id == settingId && s.OrganisationId == orgId);
@@ -208,6 +223,10 @@ public class EmailReportSettingsController : ControllerBase
         var currentUser = await GetCurrentUserAsync();
         if (currentUser == null)
             return Unauthorized();
+
+        // Validate user email (should be valid from Auth0, but extra safety)
+        if (!EmailValidator.IsValidEmail(currentUser.Email))
+            return BadRequest("User email address is invalid. Please contact support.");
 
         // Calculate report based on frequency
         string htmlBody;

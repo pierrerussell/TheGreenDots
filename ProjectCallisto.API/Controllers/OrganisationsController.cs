@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.API.Authorization;
 using ProjectCallisto.Application.Microsoft;
+using ProjectCallisto.Application.Validation;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.Domain.Users;
 using ProjectCallisto.EfCore;
@@ -436,17 +437,13 @@ public class OrganisationsController : ControllerBase
 
         if (org == null) return NotFound();
 
-        // Validate IANA timezone
-        try
+        // Validate IANA timezone against whitelist
+        if (!TimezoneValidator.IsValidTimezone(request.Timezone))
         {
-            TimeZoneInfo.FindSystemTimeZoneById(request.Timezone);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return BadRequest($"Invalid timezone: {request.Timezone}");
+            return BadRequest($"Invalid or unsupported timezone: {request.Timezone}. Please use a valid IANA timezone identifier from the supported list.");
         }
 
-        org.Timezone = request.Timezone;
+        org.Timezone = request.Timezone.Trim();
         org.TimezoneDetectedFrom = "Manual"; // User override
 
         await _dbContext.SaveChangesAsync();

@@ -47,7 +47,7 @@ public class AuthController : ControllerBase
         };
         var subjectId = auth0User.Sub!;
         var cacheKey = $"user:{subjectId}";
-        if (_cache.TryGetValue(cacheKey, out User cachedUser))
+        if (_cache.TryGetValue<User>(cacheKey, out var cachedUser) && cachedUser != null)
         {
             return Ok(cachedUser);
         }

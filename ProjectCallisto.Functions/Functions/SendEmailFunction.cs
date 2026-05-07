@@ -3,6 +3,7 @@ using Azure.Storage.Queues.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using ProjectCallisto.Application.Emails;
+using ProjectCallisto.Application.Validation;
 using Microsoft.Azure.Functions.Worker.Extensions;
 namespace ProjectCallisto.Functions.Functions;
 
@@ -30,8 +31,8 @@ public class SendEmailFunction
             if (emailMessage == null)
                 throw new InvalidOperationException("Deserialization failed");
 
-            if (string.IsNullOrEmpty(emailMessage.To) || !emailMessage.To.Contains("@"))
-                throw new ArgumentException($"Invalid email address: {emailMessage.To}");
+            // Validate email address to prevent header injection attacks
+            EmailValidator.ValidateOrThrow(emailMessage.To, nameof(emailMessage.To));
 
             Stream? csvStream = null;
             if (emailMessage.CsvAttachment != null)

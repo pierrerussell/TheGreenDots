@@ -130,7 +130,7 @@ public class OrganisationsControllerTimezoneTests : IntegrationTestBase
 
         // Assert
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequestResult.Value.Should().Be("Invalid timezone: Invalid/Timezone");
+        badRequestResult.Value.Should().Be("Invalid or unsupported timezone: Invalid/Timezone. Please use a valid IANA timezone identifier from the supported list.");
     }
 
     [Fact]

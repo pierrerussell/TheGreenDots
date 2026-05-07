@@ -112,6 +112,36 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Security headers
+app.Use(async (context, next) =>
+{
+    // Prevent MIME type sniffing
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+
+    // Prevent clickjacking attacks
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+
+    // Enable XSS protection in legacy browsers
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+
+    // Enforce HTTPS (max-age=31536000 = 1 year)
+    context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+
+    // Content Security Policy - allow scripts/styles from same origin only
+    context.Response.Headers.Append("Content-Security-Policy",
+        "default-src 'self'; " +
+        "script-src 'self'; " +
+        "style-src 'self' 'unsafe-inline'; " + // Angular needs unsafe-inline for component styles
+        "img-src 'self' data:; " + // Allow data URIs for inline images
+        "font-src 'self'; " +
+        "connect-src 'self'; " + // Allow API calls to same origin
+        "frame-ancestors 'none'; " + // Same as X-Frame-Options: DENY
+        "base-uri 'self'; " +
+        "form-action 'self'");
+
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
