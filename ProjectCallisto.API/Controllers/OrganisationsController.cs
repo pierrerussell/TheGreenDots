@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.API.Authorization;
 using ProjectCallisto.Application.Microsoft;
@@ -13,6 +14,7 @@ namespace ProjectCallisto.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/organisations")]
+[EnableRateLimiting("api")]
 public class OrganisationsController : ControllerBase
 {
     private readonly AppDbContext _dbContext;

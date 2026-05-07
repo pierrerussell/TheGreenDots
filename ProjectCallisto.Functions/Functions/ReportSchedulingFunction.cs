@@ -74,7 +74,13 @@ public class ReportSchedulingFunction
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error scheduling report for org: {OrgId}", settings.OrganisationId);
+                _logger.LogError(ex,
+                    "Error scheduling report. OrganisationId: {OrgId}, Frequency: {Frequency}, " +
+                    "IsEnabled: {IsEnabled}, ExceptionType: {ExceptionType}",
+                    settings.OrganisationId,
+                    settings.Frequency,
+                    settings.IsEnabled,
+                    ex.GetType().Name);
             }
         }
     }

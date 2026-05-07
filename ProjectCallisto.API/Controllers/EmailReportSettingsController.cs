@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Queues;
@@ -14,6 +15,7 @@ namespace ProjectCallisto.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/organisations/{orgId:guid}/email-report-settings")]
+[EnableRateLimiting("api")]
 public class EmailReportSettingsController : ControllerBase
 {
     private readonly AppDbContext _dbContext;
@@ -214,6 +216,7 @@ public class EmailReportSettingsController : ControllerBase
 
     [HttpPost("send-sample")]
     [Authorize(Policy = nameof(Permission.ManageSettings))]
+    [EnableRateLimiting("expensive")]
     public async Task<IActionResult> SendSampleEmail(
         Guid orgId,
         [FromBody] SendSampleEmailRequest request,

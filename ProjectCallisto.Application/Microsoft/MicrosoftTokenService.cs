@@ -1,10 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using ProjectCallisto.Domain.Organisations;
-
 
 namespace ProjectCallisto.Application.Microsoft;
 
@@ -19,16 +17,19 @@ public class MicrosoftTokenService : IMicrosoftTokenService
     private readonly HttpClient _httpClient;
     private readonly MicrosoftGraphOptions _options;
     private readonly IMicrosoftConnectionRepository _microsoftConnectionRepository;
+    private readonly ILogger<MicrosoftTokenService> _logger;
 
     public MicrosoftTokenService(
         HttpClient httpClient,
         IOptions<MicrosoftGraphOptions> options,
-        IMicrosoftConnectionRepository microsoftConnectionRepository
+        IMicrosoftConnectionRepository microsoftConnectionRepository,
+        ILogger<MicrosoftTokenService> logger
         )
     {
         _httpClient = httpClient;
         _options = options.Value;
         _microsoftConnectionRepository = microsoftConnectionRepository;
+        _logger = logger;
     }
 
     public async Task<MicrosoftConnection?> GetValidConnectionAsync(Guid connectionId, CancellationToken ct = default)
@@ -66,11 +67,39 @@ public class MicrosoftTokenService : IMicrosoftTokenService
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"Token refresh failed: {tokenString}");
+            // Log detailed error server-side for debugging
+            _logger.LogError(
+                "Token refresh failed for connection {ConnectionId}. Status: {StatusCode}, Response: {Response}",
+                connection.Id,
+                response.StatusCode,
+                tokenString);
+
+            // Throw generic message to client (don't expose Microsoft's error response)
+            throw new InvalidOperationException("Failed to refresh Microsoft authentication. The connection may need to be re-authorized.");
         }
 
-        var token = JsonSerializer.Deserialize<TokenResponse>(tokenString)
-                    ?? throw new InvalidOperationException("Failed to deserialize token response");
+        TokenResponse? token;
+        try
+        {
+            token = JsonSerializer.Deserialize<TokenResponse>(tokenString);
+        }
+        catch (JsonException ex)
+        {
+            // Log detailed error server-side
+            _logger.LogError(ex,
+                "Failed to deserialize token response for connection {ConnectionId}. Response: {Response}",
+                connection.Id,
+                tokenString);
+
+            // Throw generic message to client
+            throw new InvalidOperationException("Failed to process Microsoft authentication response. Please try again or re-authorize the connection.");
+        }
+
+        if (token == null)
+        {
+            _logger.LogError("Token deserialization returned null for connection {ConnectionId}", connection.Id);
+            throw new InvalidOperationException("Failed to process Microsoft authentication response. Please try again or re-authorize the connection.");
+        }
 
         // Update connection with new tokens
         connection.AccessToken = token.AccessToken;

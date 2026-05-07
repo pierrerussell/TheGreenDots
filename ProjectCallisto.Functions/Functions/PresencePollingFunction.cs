@@ -57,7 +57,9 @@ public class PresencePollingFunction
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error polling organisations");
+            _logger.LogError(ex,
+                "Fatal error in presence polling function. ExceptionType: {ExceptionType}",
+                ex.GetType().Name);
         }
     }
 
@@ -145,7 +147,13 @@ public class PresencePollingFunction
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error polling organisation {OrganisationId}", conn.OrganisationId);
+            _logger.LogError(ex,
+                "Error polling organisation. OrganisationId: {OrganisationId}, TenantId: {TenantId}, " +
+                "TenantName: {TenantName}, ExceptionType: {ExceptionType}",
+                conn.OrganisationId,
+                conn.TenantId,
+                conn.TenantName,
+                ex.GetType().Name);
         }
     }
 

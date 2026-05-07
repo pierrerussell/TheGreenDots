@@ -1,9 +1,12 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using ProjectCallisto.API.Authorization;
+using ProjectCallisto.API.Middleware;
 
 
 using ProjectCallisto.API.Services;
@@ -102,15 +105,108 @@ builder.Services.AddScoped<IPresenceBreakdownCalculator, PresenceBreakdownCalcul
 builder.Services.AddScoped<IInsightDetectionService, InsightDetectionService>();
 builder.Services.AddScoped<ReportEmailHtmlGenerator>();
 
+// Rate Limiting
+builder.Services.AddRateLimiter(options =>
+{
+    // Default policy for all API endpoints
+    options.AddFixedWindowLimiter("api", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 100; // 100 requests
+        limiterOptions.Window = TimeSpan.FromMinutes(1); // per minute
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 10; // Queue up to 10 requests when limit exceeded
+    });
+
+    // Stricter policy for expensive operations (sample emails, report generation)
+    options.AddFixedWindowLimiter("expensive", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5; // Only 5 requests
+        limiterOptions.Window = TimeSpan.FromMinutes(1); // per minute
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 2; // Shorter queue
+    });
+
+    // Global limiter - prevents a single user from overwhelming the entire app
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        // Use user's subject ID if authenticated, otherwise IP address
+        var userId = context.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
+            ?? context.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 200, // 200 requests per user
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0 // No queuing for global limiter
+        });
+    });
+
+    // Rejection status code
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 var app = builder.Build();
 var browserPath = Path.Combine(app.Environment.WebRootPath, "browser");
+
+// Global exception handler - sanitize error messages in production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+
+            var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+            var exception = exceptionHandlerPathFeature?.Error;
+
+            if (exception != null)
+            {
+                // Log detailed error server-side with structured logging
+                var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                var userId = context.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+
+                logger.LogError(exception,
+                    "Unhandled exception occurred. " +
+                    "CorrelationId: {CorrelationId}, Path: {Path}, Method: {Method}, " +
+                    "UserId: {UserId}, StatusCode: {StatusCode}",
+                    context.TraceIdentifier,
+                    context.Request.Path,
+                    context.Request.Method,
+                    userId ?? "anonymous",
+                    context.Response.StatusCode);
+            }
+
+            // Return generic error to client (no stack traces or internal details)
+            var response = new
+            {
+                error = "An error occurred processing your request. Please try again or contact support if the problem persists.",
+                correlationId = context.TraceIdentifier // For support troubleshooting
+            };
+
+            await context.Response.WriteAsJsonAsync(response);
+        });
+    });
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // In development, show detailed errors for debugging
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
+
+// Correlation ID for request tracing
+app.UseCorrelationId();
+
+// Rate limiting
+app.UseRateLimiter();
 
 // Security headers
 app.Use(async (context, next) =>

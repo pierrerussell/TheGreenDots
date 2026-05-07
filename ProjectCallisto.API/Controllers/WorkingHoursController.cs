@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.Domain.Users;
@@ -10,6 +11,7 @@ namespace ProjectCallisto.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/organisations/{orgId:guid}/working-hours")]
+[EnableRateLimiting("api")]
 public class WorkingHoursController : ControllerBase
 {
     private readonly AppDbContext _dbContext;

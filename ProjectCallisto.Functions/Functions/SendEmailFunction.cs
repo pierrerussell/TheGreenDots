@@ -24,12 +24,19 @@ public class SendEmailFunction
         QueueMessage message
     )
     {
-        _logger.LogInformation("Processing email: {MessageId}", message.MessageId);
+        _logger.LogInformation(
+            "Processing email. MessageId: {MessageId}, DequeueCount: {DequeueCount}",
+            message.MessageId,
+            message.DequeueCount);
+
         try
         {
             var emailMessage = JsonSerializer.Deserialize<EmailMessage>(message.MessageText);
             if (emailMessage == null)
+            {
+                _logger.LogError("Email message deserialization failed. MessageId: {MessageId}", message.MessageId);
                 throw new InvalidOperationException("Deserialization failed");
+            }
 
             // Validate email address to prevent header injection attacks
             EmailValidator.ValidateOrThrow(emailMessage.To, nameof(emailMessage.To));
@@ -51,7 +58,11 @@ public class SendEmailFunction
                     csvStream,
                     emailMessage.CsvFileName
                 );
-                _logger.LogInformation("HTML email sent to {To} with subject: {Subject}", emailMessage.To, emailMessage.Subject);
+                _logger.LogInformation(
+                    "HTML email sent successfully. MessageId: {MessageId}, To: {To}, Subject: {Subject}",
+                    message.MessageId,
+                    emailMessage.To,
+                    emailMessage.Subject);
             }
             else if (!string.IsNullOrEmpty(emailMessage.TemplateId))
             {
@@ -73,10 +84,38 @@ public class SendEmailFunction
                 throw new InvalidOperationException("Email message must have either HtmlBody+Subject or TemplateId");
             }
         }
+        catch (ArgumentException ex)
+        {
+            // Validation errors - don't retry (will fail again)
+            _logger.LogError(ex,
+                "Email validation failed. MessageId: {MessageId}, DequeueCount: {DequeueCount}",
+                message.MessageId,
+                message.DequeueCount);
+
+            // Don't throw - message will be moved to poison queue after max dequeue attempts
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Business logic errors - may be transient, allow retry
+            _logger.LogError(ex,
+                "Email processing error. MessageId: {MessageId}, DequeueCount: {DequeueCount}",
+                message.MessageId,
+                message.DequeueCount);
+
+            throw; // Retry with exponential backoff
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending email: {MessageId}", message.MessageId);
-            throw; // Let the function retry according to the queue's retry policy
+            // Unexpected errors - log with full context
+            _logger.LogError(ex,
+                "Unexpected error sending email. MessageId: {MessageId}, DequeueCount: {DequeueCount}, " +
+                "ExceptionType: {ExceptionType}",
+                message.MessageId,
+                message.DequeueCount,
+                ex.GetType().Name);
+
+            throw; // Retry with exponential backoff
         }
     }
 }
