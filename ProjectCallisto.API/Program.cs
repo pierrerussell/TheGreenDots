@@ -10,6 +10,7 @@ using ProjectCallisto.API.Middleware;
 
 
 using ProjectCallisto.API.Services;
+using ProjectCallisto.Application.Billing;
 using ProjectCallisto.Application.Emails;
 using ProjectCallisto.Application.Microsoft;
 using ProjectCallisto.Application.Queues;
@@ -18,6 +19,8 @@ using ProjectCallisto.AzureQueue;
 using ProjectCallisto.Domain.Organisations;
 using ProjectCallisto.EfCore;
 using ProjectCallisto.EfCore.Microsoft;
+using ProjectCallisto.Stripe;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>                                                                                                                                                                                           
@@ -40,6 +43,15 @@ builder.Services.AddScoped<IOrganisationOnboardingService, OrganisationOnboardin
 builder.Services.AddScoped<IMicrosoftTokenService, MicrosoftTokenService>();
 builder.Services.AddScoped<IMicrosoftGraphService, MicrosoftGraphService>();
 builder.Services.AddScoped<IMicrosoftConnectionRepository, MicrosoftConnectionRepository>();
+
+// For stripe
+builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection("Stripe"));
+builder.Services.AddScoped<IBillingService, StripeBillingService>();
+builder.Services.AddSingleton<IStripeClient>(x =>
+{
+    var secretKey = builder.Configuration["Stripe:SecretKey"];
+    return new StripeClient(secretKey);
+});
 
 // Required for authorization handler to access route parameters
 builder.Services.AddHttpContextAccessor();
