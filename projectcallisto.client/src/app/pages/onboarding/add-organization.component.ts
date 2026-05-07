@@ -1,8 +1,8 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, effect } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
-type Step = 'connect' | 'loading' | 'preview' | 'working-hours' | 'pricing';
+type Step = 'connect' | 'loading' | 'preview' | 'timezone' | 'working-hours' | 'pricing';
 
 export interface TeamMember {
   id: string;
@@ -33,10 +33,11 @@ interface WorkingHours {
   templateUrl: './add-organization.component.html',
   styleUrl: './add-organization.component.scss',
 })
-export class AddOrganizationComponent implements OnInit {
+export class AddOrganizationComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
+  private timeUpdateInterval: any = null;
 
   currentStep = signal<Step>('connect');
   selectedPlan = signal<'trial' | 'basic'>('trial');
@@ -45,6 +46,9 @@ export class AddOrganizationComponent implements OnInit {
   teamMembers = signal<TeamMember[]>([]);
   orgId = signal<string | null>(null);
   orgTimezone = signal('UTC');
+  selectedTimezone = signal('UTC');
+  autoDetectedTimezone = signal('UTC');
+  currentTimeInTimezone = signal('');
 
   // Working hours with smart defaults (9 AM - 5 PM, Mon-Fri)
   workingHours = signal<WorkingHours>({
@@ -64,14 +68,52 @@ export class AddOrganizationComponent implements OnInit {
     { value: 'sunday', label: 'Sunday' },
   ];
 
+  commonTimezones = [
+    { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+    { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
+    { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
+    { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
+    { value: 'Europe/London', label: 'London (GMT/BST)' },
+    { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+    { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)' },
+    { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+    { value: 'Asia/Shanghai', label: 'Shanghai (CST)' },
+    { value: 'Asia/Singapore', label: 'Singapore (SGT)' },
+    { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+    { value: 'Asia/Kolkata', label: 'India (IST)' },
+    { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
+    { value: 'Pacific/Auckland', label: 'Auckland (NZDT/NZST)' },
+    { value: 'America/Sao_Paulo', label: 'São Paulo (BRT)' },
+    { value: 'America/Mexico_City', label: 'Mexico City (CST)' },
+    { value: 'America/Toronto', label: 'Toronto (EST/EDT)' },
+    { value: 'Africa/Johannesburg', label: 'Johannesburg (SAST)' },
+  ];
+
   steps = [
     { id: 'connect' as Step, label: 'Connect' },
     { id: 'preview' as Step, label: 'Preview' },
+    { id: 'timezone' as Step, label: 'Timezone' },
     { id: 'working-hours' as Step, label: 'Working Hours' },
     { id: 'pricing' as Step, label: 'Plan' },
   ];
 
-  private stepOrder: Step[] = ['connect', 'loading', 'preview', 'working-hours', 'pricing'];
+  private stepOrder: Step[] = ['connect', 'loading', 'preview', 'timezone', 'working-hours', 'pricing'];
+
+  constructor() {
+    // Update time when on timezone step
+    effect(() => {
+      if (this.currentStep() === 'timezone') {
+        this.updateCurrentTime();
+        this.timeUpdateInterval = setInterval(() => this.updateCurrentTime(), 1000);
+      } else {
+        if (this.timeUpdateInterval) {
+          clearInterval(this.timeUpdateInterval);
+          this.timeUpdateInterval = null;
+        }
+      }
+    });
+  }
 
   ngOnInit(): void {
     const success = this.route.snapshot.queryParamMap.get('success');
@@ -90,7 +132,11 @@ export class AddOrganizationComponent implements OnInit {
     this.http.get<Organisation>(`/api/organisations/${orgId}`).subscribe({
       next: (org) => {
         this.tenantName.set(org.name);
-        this.orgTimezone.set(org.timezone || 'UTC');
+        const detectedTimezone = org.timezone || 'UTC';
+        this.orgTimezone.set(detectedTimezone);
+        this.autoDetectedTimezone.set(detectedTimezone);
+        this.selectedTimezone.set(detectedTimezone);
+        this.updateCurrentTime();
         this.loadMembers(orgId);
       },
       error: (err) => {
@@ -150,12 +196,61 @@ export class AddOrganizationComponent implements OnInit {
     window.location.href = '/api/auth/microsoft/connect';
   }
 
-  continueToWorkingHours(): void {
-    this.currentStep.set('working-hours');
+  continueToTimezone(): void {
+    this.currentStep.set('timezone');
+  }
+
+  async continueToWorkingHours(): Promise<void> {
+    // Save timezone before moving to working hours
+    const orgIdValue = this.orgId();
+    if (!orgIdValue) {
+      console.error('No organisation ID available');
+      return;
+    }
+
+    try {
+      await this.http
+        .put(`/api/organisations/${orgIdValue}/timezone`, {
+          timezone: this.selectedTimezone()
+        })
+        .toPromise();
+
+      this.currentStep.set('working-hours');
+    } catch (err) {
+      console.error('Failed to save timezone', err);
+      alert('Failed to save timezone. Please try again.');
+    }
   }
 
   continueToPricing(): void {
     this.currentStep.set('pricing');
+  }
+
+  onTimezoneChange(timezone: string): void {
+    this.selectedTimezone.set(timezone);
+    this.updateCurrentTime();
+  }
+
+  updateCurrentTime(): void {
+    const tz = this.selectedTimezone();
+    try {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short'
+      });
+      this.currentTimeInTimezone.set(formatter.format(now));
+    } catch (err) {
+      console.error('Failed to format time for timezone', tz, err);
+      this.currentTimeInTimezone.set('Invalid timezone');
+    }
   }
 
   selectPlan(plan: 'trial' | 'basic'): void {
@@ -257,5 +352,11 @@ export class AddOrganizationComponent implements OnInit {
       Offline: 'bg-status-offline',
     };
     return colors[availability] || 'bg-surface-500';
+  }
+
+  ngOnDestroy(): void {
+    if (this.timeUpdateInterval) {
+      clearInterval(this.timeUpdateInterval);
+    }
   }
 }
