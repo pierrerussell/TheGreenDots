@@ -194,9 +194,12 @@ public class OrganisationsController : ControllerBase
         var dayEnd = new DateTimeOffset(endTime, TimeSpan.Zero);
         // Query from 1 hour before to ensure we have starting state
         var queryStart = dayStart.AddHours(-1);
+        // Query 2 hours after dayEnd to capture the next status change
+        // (Polling logic records status every hour, so this ensures we get the segment end time)
+        var queryEnd = dayEnd.AddHours(2);
 
         var historyRecords = await _dbContext.PresenceHistories
-            .Where(ph => memberIds.Contains(ph.TenantMemberId) && ph.RecordedAt >= queryStart && ph.RecordedAt <= dayEnd)
+            .Where(ph => memberIds.Contains(ph.TenantMemberId) && ph.RecordedAt >= queryStart && ph.RecordedAt <= queryEnd)
             .OrderBy(ph => ph.RecordedAt)
             .ToListAsync();
 
@@ -231,11 +234,15 @@ public class OrganisationsController : ControllerBase
                 {
                     // Add segment from midnight to first change after midnight
                     var firstAfterMidnight = recordsAfterMidnight[0];
+
+                    // Clip the segment end to dayEnd if first change is after dayEnd
+                    var segmentEnd = firstAfterMidnight.RecordedAt > dayEnd ? dayEnd : firstAfterMidnight.RecordedAt;
+
                     entries.Add(new TimelineEntry(
                         lastBeforeMidnight.Availability,
                         dayStart,
-                        firstAfterMidnight.RecordedAt,
-                        (int)(firstAfterMidnight.RecordedAt - dayStart).TotalMinutes
+                        segmentEnd,
+                        (int)(segmentEnd - dayStart).TotalMinutes
                     ));
                 }
                 else
@@ -257,26 +264,33 @@ public class OrganisationsController : ControllerBase
                 var current = recordsAfterMidnight[i];
                 var next = i + 1 < recordsAfterMidnight.Count ? recordsAfterMidnight[i + 1] : null;
 
-                DateTimeOffset? segmentEndTime = next?.RecordedAt;
-                int durationMinutes;
-
-                if (segmentEndTime.HasValue)
+                // Determine the actual end time of this segment
+                DateTimeOffset actualEndTime;
+                if (next != null)
                 {
-                    durationMinutes = (int)(segmentEndTime.Value - current.RecordedAt).TotalMinutes;
+                    actualEndTime = next.RecordedAt;
                 }
                 else
                 {
                     // Last segment extends to now (or end of day if viewing past date)
-                    var effectiveEnd = dayEnd < now ? dayEnd : now;
-                    durationMinutes = (int)(effectiveEnd - current.RecordedAt).TotalMinutes;
+                    actualEndTime = dayEnd < now ? dayEnd : now;
                 }
 
-                entries.Add(new TimelineEntry(
-                    current.Availability,
-                    current.RecordedAt,
-                    segmentEndTime,
-                    durationMinutes
-                ));
+                // Clip segment to dayEnd for display purposes
+                var clippedEndTime = actualEndTime > dayEnd ? dayEnd : actualEndTime;
+
+                // Only include this segment if it starts before or at dayEnd
+                if (current.RecordedAt <= dayEnd)
+                {
+                    var durationMinutes = (int)(clippedEndTime - current.RecordedAt).TotalMinutes;
+
+                    entries.Add(new TimelineEntry(
+                        current.Availability,
+                        current.RecordedAt,
+                        clippedEndTime,
+                        durationMinutes
+                    ));
+                }
             }
 
             result.Add(new MemberTimelineResponse(member.Id, member.DisplayName, entries));
