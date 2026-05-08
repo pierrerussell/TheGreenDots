@@ -242,7 +242,7 @@ app.Use(async (context, next) =>
     // Content Security Policy - allow scripts/styles from same origin only
     context.Response.Headers.Append("Content-Security-Policy",
         "default-src 'self'; " +
-        "script-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " + // Angular needs unsafe-inline and unsafe-eval
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " + // Angular needs unsafe-inline, allow Google Fonts
         "img-src 'self' data:; " + // Allow data URIs for inline images
         "font-src 'self' data: https://fonts.gstatic.com; " + // Allow Google Fonts and data URIs
