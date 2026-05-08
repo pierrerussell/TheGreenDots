@@ -10,6 +10,8 @@ interface CurrentSubscription {
   currentPeriodEnd?: string;
   billingInterval?: string;
   pricePerSeat?: number;
+  trialEndsAt?: string;
+  stripeSubscriptionId?: string;
 }
 
 @Component({
@@ -36,22 +38,32 @@ export class PricingComponent implements OnInit {
     const org = this.orgService.organisation();
     if (!org) return;
 
-    // TODO: Replace with actual API call to GET /api/billing/subscription/:orgId
-    // This should return: { status, paidSeats, currentPeriodEnd, billingInterval, pricePerSeat }
-    // For now, using local data from organisation
-    if (org.subscription) {
-      this.currentSubscription.set({
-        status: org.subscription.status,
-        paidSeats: org.subscription.paidSeats,
-        // TODO: These should come from Stripe API
-        currentPeriodEnd: undefined,
-        billingInterval: undefined,
-        pricePerSeat: undefined
-      });
+    // Fetch subscription details from API (includes Stripe data for active subscriptions)
+    this.http.get<CurrentSubscription>(`/api/billing/subscription/${org.id}`)
+      .subscribe({
+        next: (subscription) => {
+          this.currentSubscription.set(subscription);
 
-      // Set initial seat count to current subscription
-      this.seatCount.set(org.subscription.paidSeats);
-    }
+          // Set initial seat count
+          // For trial, default to 10 seats (not the 999 trial seats)
+          if (subscription.status === 'Trial') {
+            this.seatCount.set(10);
+          } else {
+            this.seatCount.set(subscription.paidSeats);
+          }
+        },
+        error: (error) => {
+          console.error('Failed to load subscription:', error);
+          // Fall back to local data if API fails
+          if (org.subscription) {
+            this.currentSubscription.set({
+              status: org.subscription.status,
+              paidSeats: org.subscription.paidSeats,
+            });
+            this.seatCount.set(org.subscription.status === 'Trial' ? 10 : org.subscription.paidSeats);
+          }
+        }
+      });
   }
 
   formatDate(dateStr: string): string {
@@ -63,12 +75,19 @@ export class PricingComponent implements OnInit {
   hasChanges = computed(() => {
     const current = this.currentSubscription();
     if (!current) return true; // Always allow if no subscription
+    if (current.status === 'Trial') return true; // Always allow for trial (they need to subscribe)
     return this.seatCount() !== current.paidSeats;
+  });
+
+  isOnTrial = computed(() => {
+    const current = this.currentSubscription();
+    return current?.status === 'Trial';
   });
 
   isUpgrade = computed(() => {
     const current = this.currentSubscription();
     if (!current) return true;
+    if (current.status === 'Trial') return false; // No concept of upgrade for trial
     return this.seatCount() > current.paidSeats;
   });
 

@@ -18,12 +18,14 @@
         <!-- Left: Configuration -->
         <div class="p-8">
 
-          <!-- Current Plan Display (if exists and seat count changed) -->
+          <!-- Current Plan Display -->
           @if (currentSubscription(); as sub) {
             <div class="mb-6 pb-6 border-b border-surface-200">
               <div class="flex items-start justify-between mb-2">
                 <div class="text-sm font-medium text-surface-900">
-                  @if (hasChanges()) {
+                  @if (sub.status === 'Trial') {
+                    Free Trial
+                  } @else if (hasChanges()) {
                     Current → New
                   } @else {
                     Current plan
@@ -37,33 +39,62 @@
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
                     Active
                   </span>
+                } @else if (sub.status === 'PastDue') {
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
+                    Past Due
+                  </span>
+                } @else if (sub.status === 'Cancelled') {
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                    Cancelled
+                  </span>
                 }
               </div>
 
-              @if (hasChanges()) {
-                <div class="flex items-center gap-3">
-                  <div class="flex items-baseline gap-1">
-                    <span class="text-xl font-semibold text-surface-500 tabular-nums line-through">{{ sub.paidSeats }}</span>
-                    <span class="text-xs text-surface-500">seats</span>
+              @if (sub.status === 'Trial') {
+                <!-- Trial: Show trial end date -->
+                @if (sub.trialEndsAt) {
+                  <div class="text-sm text-surface-600 mb-1">
+                    Your trial ends on {{ formatDate(sub.trialEndsAt) }}
                   </div>
-                  <svg class="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                  </svg>
-                  <div class="flex items-baseline gap-1">
-                    <span class="text-2xl font-bold text-green-700 tabular-nums">{{ seatCount() }}</span>
-                    <span class="text-sm text-green-700">seats</span>
+                }
+                <div class="text-xs text-surface-500">
+                  Subscribe now to continue using The Green Dots after your trial ends
+                </div>
+              } @else if (sub.status === 'Active') {
+                <!-- Active: Show upgrade/downgrade comparison -->
+                @if (hasChanges()) {
+                  <div class="flex items-center gap-3">
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-xl font-semibold text-surface-500 tabular-nums line-through">{{ sub.paidSeats }}</span>
+                      <span class="text-xs text-surface-500">seats</span>
+                    </div>
+                    <svg class="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold text-green-700 tabular-nums">{{ seatCount() }}</span>
+                      <span class="text-sm text-green-700">seats</span>
+                    </div>
                   </div>
-                </div>
-              } @else {
-                <div class="flex items-baseline gap-2 mb-1">
-                  <span class="text-2xl font-bold text-surface-900 tabular-nums">{{ sub.paidSeats }}</span>
-                  <span class="text-sm text-surface-600">seats</span>
-                </div>
-              }
+                } @else {
+                  <div class="flex items-baseline gap-2 mb-1">
+                    <span class="text-2xl font-bold text-surface-900 tabular-nums">{{ sub.paidSeats }}</span>
+                    <span class="text-sm text-surface-600">seats</span>
+                  </div>
+                }
 
-              @if (sub.currentPeriodEnd && sub.status === 'Active' && !hasChanges()) {
-                <div class="text-xs text-surface-500 mt-1">
-                  Next billing: {{ formatDate(sub.currentPeriodEnd) }}
+                @if (sub.currentPeriodEnd && !hasChanges()) {
+                  <div class="text-xs text-surface-500 mt-1">
+                    Next billing: {{ formatDate(sub.currentPeriodEnd) }}
+                  </div>
+                }
+              } @else {
+                <!-- PastDue/Cancelled: Show expired message -->
+                <div class="text-sm text-red-600 mb-1">
+                  Your subscription is no longer active
+                </div>
+                <div class="text-xs text-surface-500">
+                  Subscribe to regain access to The Green Dots
                 </div>
               }
             </div>
@@ -125,7 +156,7 @@
               <span>5</span>
               <span>200</span>
             </div>
-            @if (currentSubscription() && hasChanges()) {
+            @if (currentSubscription() && hasChanges() && !isOnTrial()) {
               <div class="mt-3 text-xs text-green-700 font-medium">
                 @if (isUpgrade()) {
                   Adding {{ seatCount() - currentSubscription()!.paidSeats }} seats
@@ -166,7 +197,7 @@
                 /{{ billingInterval() === 'Monthly' ? 'mo' : 'yr' }}
               </span>
             </div>
-            @if (hasChanges() && currentSubscription() && currentPricePerSeat()) {
+            @if (hasChanges() && currentSubscription() && currentPricePerSeat() && !isOnTrial()) {
               <div class="text-sm">
                 @if (isUpgrade()) {
                   <span class="text-green-700 font-medium">+${{ priceDifference() }}/{{ billingInterval() === 'Monthly' ? 'mo' : 'yr' }}</span>
@@ -205,7 +236,9 @@
                 Processing...
               </span>
             } @else {
-              @if (currentSubscription()) {
+              @if (isOnTrial()) {
+                Subscribe now
+              } @else if (currentSubscription()) {
                 @if (hasChanges()) {
                   @if (isUpgrade()) {
                     Upgrade to {{ seatCount() }} seats
@@ -216,7 +249,7 @@
                   No changes
                 }
               } @else {
-                Start free trial
+                Start subscription
               }
             }
           </button>

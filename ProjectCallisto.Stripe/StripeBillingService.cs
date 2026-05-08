@@ -153,6 +153,109 @@ public class StripeBillingService : IBillingService
         return customer.Id;
     }
 
+    public async Task<SubscriptionDetails> GetSubscriptionAsync(Guid organisationId)
+    {
+        _logger.LogInformation("Fetching subscription details for organisation {OrganisationId}", organisationId);
+
+        var organisation = await _context.Organisations
+            .Include(o => o.Subscription)
+            .FirstOrDefaultAsync(o => o.Id == organisationId);
+
+        if (organisation == null)
+        {
+            throw new InvalidOperationException($"Organisation {organisationId} not found");
+        }
+
+        var subscription = organisation.Subscription;
+        if (subscription == null)
+        {
+            throw new InvalidOperationException($"Organisation {organisationId} has no subscription");
+        }
+
+        // If trial, return trial details
+        if (subscription.Status == Domain.Organisations.SubscriptionStatus.Trial)
+        {
+            return new SubscriptionDetails
+            {
+                Status = "Trial",
+                PaidSeats = subscription.PaidSeats,
+                TrialEndsAt = subscription.TrialEndsAt?.UtcDateTime,
+                CurrentPeriodEnd = null,
+                BillingInterval = null,
+                PricePerSeat = null,
+                StripeSubscriptionId = null
+            };
+        }
+
+        // If active with Stripe subscription, fetch from Stripe
+        if (subscription.Status == Domain.Organisations.SubscriptionStatus.Active
+            && !string.IsNullOrEmpty(subscription.StripeSubscriptionId))
+        {
+            var subscriptionService = new SubscriptionService(_stripeClient);
+            var stripeSubscription = await subscriptionService.GetAsync(subscription.StripeSubscriptionId);
+
+            if (stripeSubscription == null)
+            {
+                _logger.LogWarning(
+                    "Stripe subscription {SubscriptionId} not found for organisation {OrganisationId}",
+                    subscription.StripeSubscriptionId, organisationId);
+
+                // Fall back to local data
+                return new SubscriptionDetails
+                {
+                    Status = subscription.Status.ToString(),
+                    PaidSeats = subscription.PaidSeats,
+                    TrialEndsAt = null,
+                    CurrentPeriodEnd = null,
+                    BillingInterval = null,
+                    PricePerSeat = null,
+                    StripeSubscriptionId = subscription.StripeSubscriptionId
+                };
+            }
+
+            // Extract billing interval from Stripe subscription
+            var interval = stripeSubscription.Items.Data.FirstOrDefault()?.Price.Recurring?.Interval;
+            BillingInterval? billingInterval = interval switch
+            {
+                "month" => Application.Billing.BillingInterval.Monthly,
+                "year" => Application.Billing.BillingInterval.Annual,
+                _ => null
+            };
+
+            // Extract price per seat from Stripe
+            var pricePerSeatCents = stripeSubscription.Items.Data.FirstOrDefault()?.Price.UnitAmount;
+            decimal? pricePerSeat = pricePerSeatCents.HasValue
+                ? pricePerSeatCents.Value / 100m
+                : null;
+
+            // Get seat count from Stripe subscription
+            var seatCount = (int)(stripeSubscription.Items.Data.FirstOrDefault()?.Quantity ?? subscription.PaidSeats);
+
+            return new SubscriptionDetails
+            {
+                Status = "Active",
+                PaidSeats = seatCount,
+                CurrentPeriodEnd = stripeSubscription.Items.Data[0].CurrentPeriodEnd,
+                BillingInterval = billingInterval,
+                PricePerSeat = pricePerSeat,
+                TrialEndsAt = null,
+                StripeSubscriptionId = subscription.StripeSubscriptionId
+            };
+        }
+
+        // For any other status (PastDue, Cancelled), return local data
+        return new SubscriptionDetails
+        {
+            Status = subscription.Status.ToString(),
+            PaidSeats = subscription.PaidSeats,
+            TrialEndsAt = subscription.TrialEndsAt?.UtcDateTime,
+            CurrentPeriodEnd = null,
+            BillingInterval = null,
+            PricePerSeat = null,
+            StripeSubscriptionId = subscription.StripeSubscriptionId
+        };
+    }
+
     public Task<string> CreateCustomerPortalSessionAsync(Guid organisationId)
     {
         throw new NotImplementedException();

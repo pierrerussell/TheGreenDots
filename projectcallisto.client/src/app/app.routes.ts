@@ -51,7 +51,7 @@ export const routes: Routes = [
       {
         path: 'subscription',
         loadComponent: () =>
-          import('./pages/organisation/subscription/subscription.component').then(m => m.SubscriptionComponent),
+          import('./pages/organisation/subscription/pricing.component').then(m => m.PricingComponent),
         canActivate: [adminGuard],
       },
       {

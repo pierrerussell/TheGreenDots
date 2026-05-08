@@ -18,6 +18,26 @@ public class BillingController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("subscription/{organisationId}")]
+    public async Task<IActionResult> GetSubscription(Guid organisationId)
+    {
+        try
+        {
+            var subscription = await _billingService.GetSubscriptionAsync(organisationId);
+            return Ok(subscription);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to get subscription for organisation {OrganisationId}", organisationId);
+            return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching subscription for organisation {OrganisationId}", organisationId);
+            return StatusCode(500, new { error = "Failed to fetch subscription" });
+        }
+    }
+
     [HttpPost("checkout")]
     public async Task<IActionResult> CreateCheckout([FromBody] CreateCheckoutRequest request)
     {
