@@ -53,6 +53,18 @@ public class StripeBillingService : IBillingService
             throw new InvalidOperationException($"Organisation {organisationId} not found");
         }
 
+        // Check if downgrading - prevent if assigned seats > requested seats
+        var assignedSeats = await _context.TenantMembers
+            .CountAsync(tm => tm.OrganisationId == organisationId && tm.IsAssignedSeat);
+
+        if (seatCount < assignedSeats)
+        {
+            throw new ArgumentException(
+                $"Cannot downgrade to {seatCount} seats. You currently have {assignedSeats} assigned seats. " +
+                $"Please unassign {assignedSeats - seatCount} seat(s) before downgrading.",
+                nameof(seatCount));
+        }
+
         var subscription = organisation.Subscription;
         var priceService = new PriceService(_stripeClient);
         StripeList<Price> prices;
