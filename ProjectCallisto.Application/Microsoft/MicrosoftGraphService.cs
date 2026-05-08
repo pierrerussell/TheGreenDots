@@ -8,6 +8,7 @@ namespace ProjectCallisto.Application.Microsoft;
 public interface IMicrosoftGraphService
 {
     Task<Dictionary<string, PresenceResult>> GetPresenceAsync(MicrosoftConnection connection, List<string> userIds);
+    Task<List<GraphUser>> GetUsersAsync(MicrosoftConnection connection);
 }
 
 public class MicrosoftGraphService : IMicrosoftGraphService
@@ -61,6 +62,43 @@ public class MicrosoftGraphService : IMicrosoftGraphService
             }
         ) ?? new Dictionary<string, PresenceResult>();
     }
+
+    public async Task<List<GraphUser>> GetUsersAsync(MicrosoftConnection connection)
+    {
+        var users = new List<GraphUser>();
+
+        // Ensure token is valid
+        var validConnection = await _tokenService.GetValidConnectionAsync(connection.Id);
+        if (validConnection == null)
+            return users;
+
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", validConnection.AccessToken);
+
+        var url = "https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail,jobTitle&$top=999";
+
+        while (!string.IsNullOrEmpty(url))
+        {
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                break;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var data = JsonSerializer.Deserialize<GraphUsersResponse>(json);
+
+            if (data?.Value != null)
+            {
+                users.AddRange(data.Value);
+            }
+
+            url = data?.NextLink ?? string.Empty;
+        }
+
+        return users;
+    }
 }
 
 public class PresenceResult
@@ -85,4 +123,28 @@ internal class GraphPresenceItem
 
     [JsonPropertyName("activity")]
     public string? Activity { get; set; }
+}
+
+public class GraphUser
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("displayName")]
+    public string? DisplayName { get; set; }
+
+    [JsonPropertyName("mail")]
+    public string? Mail { get; set; }
+
+    [JsonPropertyName("jobTitle")]
+    public string? JobTitle { get; set; }
+}
+
+internal class GraphUsersResponse
+{
+    [JsonPropertyName("value")]
+    public List<GraphUser>? Value { get; set; }
+
+    [JsonPropertyName("@odata.nextLink")]
+    public string? NextLink { get; set; }
 }

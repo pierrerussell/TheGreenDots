@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { OrganisationService } from '../organisation.service';
+import { ToastService } from '../../../shared/toast.service';
 
 interface EmailRecipient {
   email: string;
@@ -27,6 +28,7 @@ interface EmailReportSettings {
 })
 export class EmailReportSettingsComponent implements OnInit {
   private http = inject(HttpClient);
+  private toast = inject(ToastService);
   orgService = inject(OrganisationService);
 
   // State
@@ -341,10 +343,10 @@ export class EmailReportSettingsComponent implements OnInit {
         .toPromise();
 
       console.log('Sample email sent:', response?.message);
-      alert(response?.message || 'Sample email sent successfully!');
+      this.toast.success(response?.message || 'Sample email sent successfully!');
     } catch (err) {
       console.error('Failed to send sample email', err);
-      alert('Failed to send sample email. Please try again.');
+      this.toast.error('Failed to send sample email. Please try again.');
     } finally {
       this.dailySendingSample.set(false);
     }
@@ -363,10 +365,10 @@ export class EmailReportSettingsComponent implements OnInit {
         .toPromise();
 
       console.log('Sample email sent:', response?.message);
-      alert(response?.message || 'Sample email sent successfully!');
+      this.toast.success(response?.message || 'Sample email sent successfully!');
     } catch (err) {
       console.error('Failed to send sample email', err);
-      alert('Failed to send sample email. Please try again.');
+      this.toast.error('Failed to send sample email. Please try again.');
     } finally {
       this.weeklySendingSample.set(false);
     }
@@ -385,10 +387,10 @@ export class EmailReportSettingsComponent implements OnInit {
         .toPromise();
 
       console.log('Sample email sent:', response?.message);
-      alert(response?.message || 'Sample email sent successfully!');
+      this.toast.success(response?.message || 'Sample email sent successfully!');
     } catch (err) {
       console.error('Failed to send sample email', err);
-      alert('Failed to send sample email. Please try again.');
+      this.toast.error('Failed to send sample email. Please try again.');
     } finally {
       this.monthlySendingSample.set(false);
     }

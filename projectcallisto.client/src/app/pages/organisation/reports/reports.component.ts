@@ -162,6 +162,33 @@ export class ReportsComponent implements OnInit {
     return { left: `${left}%`, width: `${width}%` };
   }
 
+  getNonWorkingHoursOverlays(): {
+    beforeWork: { left: string; width: string } | null;
+    afterWork: { left: string; width: string } | null;
+  } | null {
+    const wh = this.workingHours();
+    if (!wh) return null;
+
+    // Parse "HH:mm:ss" format
+    const parseTime = (timeStr: string): number => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const startMinutes = parseTime(wh.startTime);
+    const endMinutes = parseTime(wh.endTime);
+    const totalMinutes = 24 * 60;
+
+    const beforeWorkWidth = (startMinutes / totalMinutes) * 100;
+    const afterWorkLeft = (endMinutes / totalMinutes) * 100;
+    const afterWorkWidth = ((totalMinutes - endMinutes) / totalMinutes) * 100;
+
+    return {
+      beforeWork: beforeWorkWidth > 0 ? { left: '0%', width: `${beforeWorkWidth}%` } : null,
+      afterWork: afterWorkWidth > 0 ? { left: `${afterWorkLeft}%`, width: `${afterWorkWidth}%` } : null,
+    };
+  }
+
   isWorkingDay(): boolean {
     const wh = this.workingHours();
     if (!wh) return false;
@@ -187,10 +214,5 @@ export class ReportsComponent implements OnInit {
       Offline: 'bg-status-offline',
     };
     return colors[status] || 'bg-surface-300';
-  }
-
-  exportCsv(): void {
-    // TODO: Implement CSV export
-    console.log('Exporting CSV for', this.selectedDate());
   }
 }

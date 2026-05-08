@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { OrganisationService } from '../organisation.service';
+import { ToastService } from '../../../shared/toast.service';
 
 interface CurrentSubscription {
   status: string;
@@ -26,6 +27,7 @@ interface CurrentSubscription {
 export class PricingComponent implements OnInit {
   private http = inject(HttpClient);
   private orgService = inject(OrganisationService);
+  private toast = inject(ToastService);
 
   seatCount = signal(10);
   billingInterval = signal<'Monthly' | 'Annual'>('Monthly');
@@ -195,7 +197,7 @@ export class PricingComponent implements OnInit {
   subscribe(): void {
     const org = this.orgService.organisation();
     if (!org) {
-      alert('Please select an organization first');
+      this.toast.error('Please select an organization first');
       return;
     }
 
@@ -216,14 +218,14 @@ export class PricingComponent implements OnInit {
           } else {
             // Instant update (upgrade/downgrade) - show success and reload
             this.loading.set(false);
-            alert(result.message || 'Subscription updated successfully!');
+            this.toast.success(result.message || 'Subscription updated successfully!');
             // Reload subscription data
             this.loadCurrentSubscription();
           }
         },
         error: (error) => {
           console.error('Failed to create checkout session:', error);
-          alert('Failed to start checkout. Please try again.');
+          this.toast.error('Failed to start checkout. Please try again.');
           this.loading.set(false);
         }
       });
@@ -250,13 +252,13 @@ export class PricingComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.loading.set(false);
-          alert(result.message);
+          this.toast.success(result.message);
           // Reload subscription data to show cancellation status
           this.loadCurrentSubscription();
         },
         error: (error) => {
           console.error('Failed to cancel subscription:', error);
-          alert('Failed to cancel subscription. Please try again.');
+          this.toast.error('Failed to cancel subscription. Please try again.');
           this.loading.set(false);
         }
       });
@@ -279,13 +281,13 @@ export class PricingComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.loading.set(false);
-          alert(result.message);
+          this.toast.success(result.message);
           // Reload subscription data to show reactivated status
           this.loadCurrentSubscription();
         },
         error: (error) => {
           console.error('Failed to reactivate subscription:', error);
-          alert('Failed to reactivate subscription. Please try again.');
+          this.toast.error('Failed to reactivate subscription. Please try again.');
           this.loading.set(false);
         }
       });
@@ -307,7 +309,7 @@ export class PricingComponent implements OnInit {
         },
         error: (error) => {
           console.error('Failed to open customer portal:', error);
-          alert('Failed to open customer portal. Please try again.');
+          this.toast.error('Failed to open customer portal. Please try again.');
           this.loading.set(false);
         }
       });

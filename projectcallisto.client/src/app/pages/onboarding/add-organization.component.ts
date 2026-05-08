@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, OnDestroy, effect } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { ToastService } from '../../shared/toast.service';
 
 type Step = 'connect' | 'loading' | 'preview' | 'timezone' | 'working-hours' | 'trial-status';
 
@@ -44,6 +45,7 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
+  private toast = inject(ToastService);
   private timeUpdateInterval: any = null;
 
   currentStep = signal<Step>('connect');
@@ -238,7 +240,7 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
       this.currentStep.set('working-hours');
     } catch (err) {
       console.error('Failed to save timezone', err);
-      alert('Failed to save timezone. Please try again.');
+      this.toast.error('Failed to save timezone. Please try again.');
     }
   }
 
@@ -284,7 +286,7 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
     try {
       const wh = this.workingHours();
       if (wh.workingDays.length === 0) {
-        alert('Please select at least one working day');
+        this.toast.error('Please select at least one working day');
         return;
       }
 
@@ -301,7 +303,7 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
       this.continueToTrialStatus();
     } catch (err) {
       console.error('Failed to save working hours', err);
-      alert('Failed to save working hours. Please try again.');
+      this.toast.error('Failed to save working hours. Please try again.');
     }
   }
 

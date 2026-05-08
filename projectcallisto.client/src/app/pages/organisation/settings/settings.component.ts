@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { OrganisationService } from '../organisation.service';
+import { ToastService } from '../../../shared/toast.service';
 
 interface TeamMember {
   id: string;
@@ -44,6 +45,7 @@ interface TimezoneInfo {
 export class SettingsComponent implements OnInit {
   private router = inject(Router);
   private http = inject(HttpClient);
+  private toast = inject(ToastService);
   orgService = inject(OrganisationService);
 
   editingName = signal(false);
@@ -245,7 +247,7 @@ export class SettingsComponent implements OnInit {
     if (!org || !wh) return;
 
     if (wh.workingDays.length === 0) {
-      alert('Please select at least one working day');
+      this.toast.error('Please select at least one working day');
       return;
     }
 
@@ -264,7 +266,7 @@ export class SettingsComponent implements OnInit {
       this.workingHours.set(updated || null);
     } catch (err) {
       console.error('Failed to save working hours', err);
-      alert('Failed to save working hours');
+      this.toast.error('Failed to save working hours');
     } finally {
       this.savingWorkingHours.set(false);
     }
@@ -360,10 +362,10 @@ export class SettingsComponent implements OnInit {
 
       this.timezoneInfo.set(updated || null);
       this.editingTimezone.set(false);
-      alert('Timezone updated successfully! Email reports will now use the correct timezone.');
+      this.toast.success('Timezone updated successfully! Email reports will now use the correct timezone.');
     } catch (err) {
       console.error('Failed to save timezone', err);
-      alert('Failed to save timezone. Please try again.');
+      this.toast.error('Failed to save timezone. Please try again.');
     } finally {
       this.savingTimezone.set(false);
     }

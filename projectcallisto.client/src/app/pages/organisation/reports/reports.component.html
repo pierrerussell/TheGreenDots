@@ -1,20 +1,8 @@
 <div class="p-6">
   <!-- Header -->
-  <div class="flex items-center justify-between mb-6 animate-fade-up">
-    <div>
-      <h1 class="text-xl font-semibold text-surface-900">Activity Timeline</h1>
-      <p class="text-sm text-surface-500">View 24-hour presence history for your team members</p>
-    </div>
-
-    <button
-      (click)="exportCsv()"
-      class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-surface-200 hover:bg-surface-50 text-surface-700 text-sm font-semibold rounded-lg transition-colors"
-    >
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-      </svg>
-      Export CSV
-    </button>
+  <div class="mb-6 animate-fade-up">
+    <h1 class="text-xl font-semibold text-surface-900">Activity Timeline</h1>
+    <p class="text-sm text-surface-500">View 24-hour presence history for your team members</p>
   </div>
 
   <!-- Date picker -->
@@ -93,7 +81,7 @@
       @if (workingHours() && isWorkingDay()) {
         <p class="text-xs text-surface-500">
           Working hours: {{ workingHours()!.startTime.substring(0, 5) }} - {{ workingHours()!.endTime.substring(0, 5) }}
-          <span class="text-surface-400">(highlighted in green below)</span>
+          <span class="text-surface-400">(non-working hours are dimmed)</span>
         </p>
       } @else if (workingHours() && !isWorkingDay()) {
         <p class="text-xs text-surface-500">
@@ -151,29 +139,40 @@
 
               <!-- Timeline bar -->
               <div class="flex-1 h-8 bg-surface-100 rounded relative overflow-hidden">
-                <!-- Working hours overlay -->
-                @if (getWorkingHoursOverlay() && isWorkingDay()) {
-                  <div
-                    class="absolute top-0 bottom-0 bg-green-50/50 border-l border-r border-green-200"
-                    [style.left]="getWorkingHoursOverlay()!.left"
-                    [style.width]="getWorkingHoursOverlay()!.width"
-                  ></div>
-                }
-
                 <!-- Presence segments -->
                 @for (segment of getTimelineSegments(member.entries); track segment.left) {
                   <div
-                    class="absolute top-1 bottom-1"
+                    class="absolute top-1 bottom-1 z-10"
                     [class]="getSegmentColor(segment.status)"
                     [style.left]="segment.left"
                     [style.width]="segment.width"
                   ></div>
                 }
 
+                <!-- Non-working hours dimming overlay (on top of segments) -->
+                @if (getNonWorkingHoursOverlays() && isWorkingDay()) {
+                  <!-- Before working hours -->
+                  @if (getNonWorkingHoursOverlays()!.beforeWork) {
+                    <div
+                      class="absolute top-0 bottom-0 bg-black/15 pointer-events-none z-20"
+                      [style.left]="getNonWorkingHoursOverlays()!.beforeWork!.left"
+                      [style.width]="getNonWorkingHoursOverlays()!.beforeWork!.width"
+                    ></div>
+                  }
+                  <!-- After working hours -->
+                  @if (getNonWorkingHoursOverlays()!.afterWork) {
+                    <div
+                      class="absolute top-0 bottom-0 bg-black/15 pointer-events-none z-20"
+                      [style.left]="getNonWorkingHoursOverlays()!.afterWork!.left"
+                      [style.width]="getNonWorkingHoursOverlays()!.afterWork!.width"
+                    ></div>
+                  }
+                }
+
                 <!-- Hour grid lines -->
                 @for (hour of hours; track hour; let j = $index) {
                   <div
-                    class="absolute top-0 bottom-0 w-px bg-white/30"
+                    class="absolute top-0 bottom-0 w-px bg-white/30 z-30"
                     [style.left]="(j / hours.length * 100) + '%'"
                   ></div>
                 }

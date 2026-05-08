@@ -361,6 +361,93 @@ public class OrganisationsController : ControllerBase
         return Ok(members);
     }
 
+    [HttpPost("{id:guid}/members/sync")]
+    [Authorize(Policy = nameof(Permission.ManageSeats))]
+    public async Task<IActionResult> SyncMembersFromMicrosoft(Guid id)
+    {
+        // Get organisation
+        var organisation = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (organisation == null)
+            return NotFound("Organisation not found");
+
+        // Get Microsoft connection
+        var connection = await _dbContext.MicrosoftConnections
+            .FirstOrDefaultAsync(c => c.Id == organisation.ActiveConnectionId);
+
+        if (connection == null)
+            return BadRequest(new { error = "No Microsoft connection found for this organisation" });
+
+        try
+        {
+            // Fetch users from Microsoft Graph
+            var graphUsers = await _graphService.GetUsersAsync(connection);
+
+            // Get existing tenant members
+            var existingMembers = await _dbContext.TenantMembers
+                .Where(m => m.OrganisationId == id)
+                .ToListAsync();
+
+            var existingMemberIds = existingMembers.Select(m => m.MicrosoftUserId).ToHashSet();
+
+            // Add new members (those not already in database)
+            var newMembers = graphUsers
+                .Where(gu => !existingMemberIds.Contains(gu.Id))
+                .Select(gu => new TenantMember
+                {
+                    OrganisationId = id,
+                    MicrosoftUserId = gu.Id,
+                    DisplayName = gu.DisplayName ?? "Unknown",
+                    Email = gu.Mail,
+                    JobTitle = gu.JobTitle,
+                    IsAssignedSeat = false, // Don't auto-assign seats during sync
+                    CreatedAt = DateTimeOffset.UtcNow
+                })
+                .ToList();
+
+            if (newMembers.Any())
+            {
+                await _dbContext.TenantMembers.AddRangeAsync(newMembers);
+            }
+
+            // Update existing members (in case display name, email, or job title changed)
+            foreach (var existingMember in existingMembers)
+            {
+                var graphUser = graphUsers.FirstOrDefault(gu => gu.Id == existingMember.MicrosoftUserId);
+                if (graphUser != null)
+                {
+                    existingMember.DisplayName = graphUser.DisplayName ?? "Unknown";
+                    existingMember.Email = graphUser.Mail;
+                    existingMember.JobTitle = graphUser.JobTitle;
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
+
+            // Return updated member list
+            var allMembers = await _dbContext.TenantMembers
+                .Where(m => m.OrganisationId == id)
+                .Select(m => new AllMembersResponse(
+                    m.Id,
+                    m.DisplayName,
+                    m.Email,
+                    m.JobTitle,
+                    m.IsAssignedSeat
+                ))
+                .ToListAsync();
+
+            _logger.LogInformation("Synced {NewCount} new members for organisation {OrgId}", newMembers.Count, id);
+
+            return Ok(allMembers);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to sync members for organisation {OrgId}", id);
+            return StatusCode(500, new { error = "Failed to sync members from Microsoft. Please try again." });
+        }
+    }
+
     [HttpPost("{id:guid}/members/{memberId:guid}/assign-seat")]
     [Authorize(Policy = nameof(Permission.ManageSeats))] 
     public async Task<IActionResult> AssignSeat(Guid id, Guid memberId)
