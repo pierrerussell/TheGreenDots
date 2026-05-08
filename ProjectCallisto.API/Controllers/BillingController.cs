@@ -6,7 +6,6 @@ namespace ProjectCallisto.API.Controllers;
 
 [ApiController]
 [Route("api/billing")]
-[Authorize]
 public class BillingController : ControllerBase
 {
     private readonly IBillingService _billingService;
@@ -18,7 +17,46 @@ public class BillingController : ControllerBase
         _logger = logger;
     }
 
+    [HttpPost("webhook")]
+    [AllowAnonymous] // Stripe calls this endpoint
+    public async Task<IActionResult> HandleWebhook()
+    {
+        try
+        {
+            // Read raw body
+            using var reader = new StreamReader(Request.Body);
+            var json = await reader.ReadToEndAsync();
+
+            // Get Stripe signature header
+            if (!Request.Headers.TryGetValue("Stripe-Signature", out var signatureHeader))
+            {
+                _logger.LogWarning("Webhook received without Stripe-Signature header");
+                return BadRequest(new { error = "Missing Stripe-Signature header" });
+            }
+
+            var signature = signatureHeader.ToString();
+
+            // Process webhook
+            await _billingService.HandleWebhookEventAsync(json, signature);
+
+            return Ok();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid webhook signature");
+            return BadRequest(new { error = "Invalid signature" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing webhook");
+            // Still return 200 to prevent Stripe retries for non-transient errors
+            // Only return 5xx for actual server errors that should be retried
+            return StatusCode(500, new { error = "Webhook processing failed" });
+        }
+    }
+
     [HttpGet("subscription/{organisationId}")]
+    [Authorize]
     public async Task<IActionResult> GetSubscription(Guid organisationId)
     {
         try
@@ -39,6 +77,7 @@ public class BillingController : ControllerBase
     }
 
     [HttpPost("checkout")]
+    [Authorize]
     public async Task<IActionResult> CreateCheckout([FromBody] CreateCheckoutRequest request)
     {
         try

@@ -240,7 +240,9 @@
                 Subscribe now
               } @else if (currentSubscription()) {
                 @if (hasChanges()) {
-                  @if (isUpgrade()) {
+                  @if (isBillingIntervalChange() && seatCount() === currentSubscription()!.paidSeats) {
+                    Switch to {{ billingInterval() === 'Monthly' ? 'monthly' : 'annual' }} billing
+                  } @else if (isUpgrade()) {
                     Upgrade to {{ seatCount() }} seats
                   } @else {
                     Downgrade to {{ seatCount() }} seats

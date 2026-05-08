@@ -76,12 +76,27 @@ export class PricingComponent implements OnInit {
     const current = this.currentSubscription();
     if (!current) return true; // Always allow if no subscription
     if (current.status === 'Trial') return true; // Always allow for trial (they need to subscribe)
-    return this.seatCount() !== current.paidSeats;
+
+    // Check if seat count changed
+    const seatCountChanged = this.seatCount() !== current.paidSeats;
+
+    // Check if billing interval changed (only for active subscriptions)
+    const billingIntervalChanged = current.status === 'Active'
+      && current.billingInterval
+      && this.billingInterval() !== current.billingInterval;
+
+    return seatCountChanged || billingIntervalChanged;
   });
 
   isOnTrial = computed(() => {
     const current = this.currentSubscription();
     return current?.status === 'Trial';
+  });
+
+  isBillingIntervalChange = computed(() => {
+    const current = this.currentSubscription();
+    if (!current || current.status !== 'Active' || !current.billingInterval) return false;
+    return this.billingInterval() !== current.billingInterval;
   });
 
   isUpgrade = computed(() => {
@@ -189,10 +204,19 @@ export class PricingComponent implements OnInit {
       billingInterval: this.billingInterval()
     };
 
-    this.http.post<{ sessionId: string; sessionUrl: string }>('/api/billing/checkout', checkoutRequest)
+    this.http.post<{ success: boolean; sessionId?: string; sessionUrl?: string; message?: string }>('/api/billing/checkout', checkoutRequest)
       .subscribe({
         next: (result) => {
-          window.location.href = result.sessionUrl;
+          if (result.sessionUrl) {
+            // New subscription or billing interval change - redirect to checkout
+            window.location.href = result.sessionUrl;
+          } else {
+            // Instant update (upgrade/downgrade) - show success and reload
+            this.loading.set(false);
+            alert(result.message || 'Subscription updated successfully!');
+            // Reload subscription data
+            this.loadCurrentSubscription();
+          }
         },
         error: (error) => {
           console.error('Failed to create checkout session:', error);
