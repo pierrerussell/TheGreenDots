@@ -169,8 +169,8 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
   private loadMembers(orgId: string): void {
     this.loadingMessage.set('Loading team members...');
 
-    // Use members endpoint (returns live presence, all members auto-assigned during trial)
-    this.http.get<TeamMember[]>(`/api/organisations/${orgId}/members`).subscribe({
+    // Use preview endpoint (returns ALL members with live presence, regardless of IsAssignedSeat)
+    this.http.get<TeamMember[]>(`/api/organisations/${orgId}/members/preview`).subscribe({
       next: (members) => {
         this.teamMembers.set(members);
         this.currentStep.set('preview');

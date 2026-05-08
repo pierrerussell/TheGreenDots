@@ -149,6 +149,45 @@ public class OrganisationsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{id:guid}/members/preview")]
+    [Authorize(Policy = nameof(Permission.ViewDashboard))]
+    public async Task<IActionResult> GetMembersPreview(Guid id)
+    {
+        // Returns ALL members with live presence (used in onboarding preview)
+        // Unlike /members, this doesn't filter by IsAssignedSeat
+        var members = await _dbContext.TenantMembers
+            .Where(m => m.OrganisationId == id)
+            .ToListAsync();
+
+        // Get connection for Graph API call
+        var connection = await _dbContext.Organisations
+            .Where(o => o.Id == id)
+            .Join(
+                _dbContext.MicrosoftConnections,
+                o => o.ActiveConnectionId,
+                c => c.Id,
+                (o, c) => c)
+            .FirstOrDefaultAsync();
+
+        if (connection == null)
+            return Ok(members.Select(m => new MemberResponse(m.Id, m.DisplayName, m.Email, m.JobTitle, "Offline", null)));
+
+        // Fetch live presence for ALL members
+        var memberIds = members.Select(m => m.MicrosoftUserId).ToList();
+        var presenceMap = await _graphService.GetPresenceAsync(connection, memberIds);
+
+        var result = members.Select(m => new MemberResponse(
+            m.Id,
+            m.DisplayName,
+            m.Email,
+            m.JobTitle,
+            presenceMap.GetValueOrDefault(m.MicrosoftUserId)?.Availability ?? "Offline",
+            presenceMap.GetValueOrDefault(m.MicrosoftUserId)?.Activity
+        ));
+
+        return Ok(result);
+    }
+
     [HttpGet("{id:guid}/presence-history")]
     [Authorize(Policy = nameof(Permission.ViewDashboard))]
     public async Task<IActionResult> GetPresenceHistory(Guid id, [FromQuery] int limit = 100)
