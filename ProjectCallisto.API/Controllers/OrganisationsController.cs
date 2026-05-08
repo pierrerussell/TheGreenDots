@@ -81,6 +81,26 @@ public class OrganisationsController : ControllerBase
         return Ok(new { hasAccess = true, role = roleLower });
     }
 
+    [HttpPatch("{id:guid}")]
+    [Authorize(Policy = nameof(Permission.ManageSettings))]
+    public async Task<IActionResult> UpdateOrganisation(Guid id, [FromBody] UpdateOrganisationRequest request)
+    {
+        var org = await _dbContext.Organisations
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (org == null) return NotFound();
+
+        // Update name if provided
+        if (!string.IsNullOrWhiteSpace(request.Name))
+        {
+            org.Name = request.Name.Trim();
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(org);
+    }
+
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = nameof(Permission.ManageSettings))]
     public async Task<IActionResult> DeleteOrganisation(Guid id)
@@ -90,6 +110,22 @@ public class OrganisationsController : ControllerBase
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (org == null) return NotFound();
+
+        // Get all tenant members for this organisation
+        var tenantMembers = await _dbContext.TenantMembers
+            .Where(tm => tm.OrganisationId == id)
+            .ToListAsync();
+
+        var tenantMemberIds = tenantMembers.Select(tm => tm.Id).ToList();
+
+        // Remove presence histories for all tenant members
+        var presenceHistories = await _dbContext.PresenceHistories
+            .Where(ph => tenantMemberIds.Contains(ph.TenantMemberId))
+            .ToListAsync();
+        _dbContext.PresenceHistories.RemoveRange(presenceHistories);
+
+        // Remove tenant members
+        _dbContext.TenantMembers.RemoveRange(tenantMembers);
 
         // Remove organisation user links
         var orgUsers = await _dbContext.OrganisationUsers
@@ -103,10 +139,13 @@ public class OrganisationsController : ControllerBase
             .ToListAsync();
         _dbContext.MicrosoftConnections.RemoveRange(connections);
 
-        // Remove organisation
+        // Remove organisation (subscription, working hours, and email report settings will cascade)
         _dbContext.Organisations.Remove(org);
 
         await _dbContext.SaveChangesAsync();
+
+        _logger.LogInformation("Deleted organisation {OrgId} with {MemberCount} members and {HistoryCount} presence records",
+            id, tenantMembers.Count, presenceHistories.Count);
 
         return NoContent();
     }
@@ -593,6 +632,8 @@ public class OrganisationsController : ControllerBase
 }
 
 public record UpdateTimezoneRequest(string Timezone);
+
+public record UpdateOrganisationRequest(string? Name);
 
 public record MemberResponse(
     Guid Id,

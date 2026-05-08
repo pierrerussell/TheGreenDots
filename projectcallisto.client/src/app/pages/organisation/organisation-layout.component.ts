@@ -107,12 +107,57 @@ import { OrganisationService } from './organisation.service';
 
         <!-- Footer -->
         <div class="p-3 border-t border-surface-200">
-          <div class="flex items-center gap-3 px-3 py-2">
+          <div class="flex items-center gap-3 px-3 py-2 mb-2">
             <div class="flex items-center gap-1">
               <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse-soft"></span>
               <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse-soft" style="animation-delay: 0.5s;"></span>
             </div>
             <span class="text-xs font-medium text-surface-500">The Green Dots</span>
+          </div>
+
+          <!-- User Menu -->
+          <div class="relative user-menu-container">
+            <button
+              (click)="toggleUserMenu()"
+              class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg border border-transparent text-surface-600 hover:bg-surface-50 hover:text-surface-900 transition-colors"
+              [class.bg-surface-50]="showUserMenu()"
+            >
+              <div class="w-6 h-6 rounded-full bg-green-100 border border-green-200 flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-green-700" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                </svg>
+              </div>
+              <span class="flex-1 text-left">Account</span>
+              <svg
+                class="w-4 h-4 transition-transform flex-shrink-0"
+                [class.rotate-180]="showUserMenu()"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+
+            <!-- Dropdown Menu -->
+            @if (showUserMenu()) {
+              <div
+                class="absolute bottom-full left-3 right-3 mb-2 bg-white rounded-xl border border-surface-200 shadow-lg animate-fade-in-up"
+              >
+                <div class="py-2">
+                  <button
+                    (click)="logout()"
+                    class="w-full flex items-center gap-3 px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                    </svg>
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            }
           </div>
         </div>
       </aside>
@@ -142,6 +187,7 @@ export class OrganisationLayoutComponent implements OnInit {
   orgService = inject(OrganisationService);
 
   orgId = '';
+  showUserMenu = signal(false);
 
   ngOnInit(): void {
     this.orgId = this.route.snapshot.paramMap.get('id') || '';
@@ -152,5 +198,13 @@ export class OrganisationLayoutComponent implements OnInit {
 
   goHome(): void {
     this.router.navigate(['/']);
+  }
+
+  toggleUserMenu(): void {
+    this.showUserMenu.update(v => !v);
+  }
+
+  logout(): void {
+    window.location.href = '/signout';
   }
 }

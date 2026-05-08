@@ -123,8 +123,10 @@ export class SettingsComponent implements OnInit {
     try {
       await this.orgService.updateOrganisation({ name });
       this.editingName.set(false);
+      this.toast.success('Organisation name updated successfully');
     } catch (err) {
       console.error('Failed to update name', err);
+      this.toast.error('Failed to update organisation name. Please try again.');
     } finally {
       this.savingName.set(false);
     }
@@ -214,11 +216,13 @@ export class SettingsComponent implements OnInit {
     this.deleting.set(true);
     this.http.delete(`/api/organisations/${org.id}`).subscribe({
       next: () => {
+        this.toast.success('Organisation deleted successfully');
         this.orgService.clear();
         this.router.navigate(['/']);
       },
       error: (err) => {
         console.error('Failed to delete organisation', err);
+        this.toast.error('Failed to delete organisation. Please try again.');
         this.deleting.set(false);
       },
     });

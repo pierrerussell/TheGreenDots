@@ -21,6 +21,7 @@ export class HomeComponent implements OnInit {
 
   organisations = signal<Organisation[]>([]);
   loading = signal(true);
+  showUserMenu = signal(false);
 
   ngOnInit(): void {
     this.loadOrganisations();
@@ -55,5 +56,13 @@ export class HomeComponent implements OnInit {
 
   viewOrganisation(id: string): void {
     this.router.navigate(['/organisation', id]);
+  }
+
+  toggleUserMenu(): void {
+    this.showUserMenu.update(v => !v);
+  }
+
+  logout(): void {
+    window.location.href = '/signout';
   }
 }
