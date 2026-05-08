@@ -83,6 +83,8 @@ builder.Services.AddAuthentication(options =>
         options.Scope.Add("email");
         options.CallbackPath = "/signin-oidc";
         options.MapInboundClaims = false;
+
+        options.SignedOutRedirectUri = "/";
     });
 
 // Add permission-based authorization
