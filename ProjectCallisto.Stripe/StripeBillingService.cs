@@ -56,122 +56,146 @@ public class StripeBillingService : IBillingService
         var subscription = organisation.Subscription;
         var priceService = new PriceService(_stripeClient);
         StripeList<Price> prices;
-        // If they have an active subscription, UPDATE it directly instead of creating checkout session
+
+        // If they have an active subscription, verify with Stripe first before updating
         if (subscription?.Status == Domain.Organisations.SubscriptionStatus.Active
             && !string.IsNullOrEmpty(subscription.StripeSubscriptionId))
         {
             _logger.LogInformation(
-                "Updating existing subscription {SubscriptionId} for organisation {OrganisationId}",
+                "Verifying subscription {SubscriptionId} status in Stripe for organisation {OrganisationId}",
                 subscription.StripeSubscriptionId, organisationId);
 
             var subscriptionService = new SubscriptionService(_stripeClient);
             var stripeSubscription = await subscriptionService.GetAsync(subscription.StripeSubscriptionId);
 
-            if (stripeSubscription == null)
+            // Verify subscription is actually active in Stripe (source of truth)
+            if (stripeSubscription == null || stripeSubscription.Status != "active")
             {
-                throw new InvalidOperationException(
-                    $"Stripe subscription {subscription.StripeSubscriptionId} not found");
-            }
+                _logger.LogWarning(
+                    "Subscription {SubscriptionId} is not active in Stripe (status: {Status}), syncing local state",
+                    subscription.StripeSubscriptionId, stripeSubscription?.Status ?? "not found");
 
-            // Get the current subscription item
-            var subscriptionItem = stripeSubscription.Items.Data.FirstOrDefault();
-            if (subscriptionItem == null)
-            {
-                throw new InvalidOperationException(
-                    $"No subscription items found for subscription {subscription.StripeSubscriptionId}");
-            }
-
-            var oldSeatCount = subscription.PaidSeats;
-
-            // Check if they're trying to change billing interval
-            var currentInterval = subscriptionItem.Price.Recurring?.Interval;
-            var requestedInterval = billingInterval == BillingInterval.Monthly ? "month" : "year";
-
-            if (currentInterval != requestedInterval)
-            {
-                // Billing interval change - fetch new price and swap it
-                _logger.LogInformation(
-                    "Billing interval change detected ({CurrentInterval} → {RequestedInterval}), updating price",
-                    currentInterval, requestedInterval);
-
-                var newPriceLookupKey = billingInterval == BillingInterval.Monthly
-                    ? "monthly_volume"
-                    : "annual_volume";
-
-
-                prices = await priceService.ListAsync(new PriceListOptions
+                // Sync local state with Stripe
+                subscription.Status = stripeSubscription?.Status switch
                 {
-                    LookupKeys = new List<string> { newPriceLookupKey },
-                    Limit = 1
-                });
-                var newPrice = prices.FirstOrDefault();
-                if (newPrice == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Price with lookup key {newPriceLookupKey} not found in Stripe");
-                }
-
-                // Update subscription with new price AND quantity
-                await subscriptionService.UpdateAsync(subscription.StripeSubscriptionId, new SubscriptionUpdateOptions
-                {
-                    Items = new List<SubscriptionItemOptions>
-                    {
-                        new SubscriptionItemOptions
-                        {
-                            Id = subscriptionItem.Id,
-                            Price = newPrice.Id, // Swap to new billing interval price
-                            Quantity = seatCount
-                        }
-                    },
-                    ProrationBehavior = "always_invoice" // Charge/credit immediately
-                });
-
-                // Update local database
-                subscription.PaidSeats = seatCount;
+                    "past_due" => Domain.Organisations.SubscriptionStatus.PastDue,
+                    "canceled" => Domain.Organisations.SubscriptionStatus.Cancelled,
+                    _ => Domain.Organisations.SubscriptionStatus.Cancelled
+                };
                 await _context.SaveChangesAsync();
 
+                // Fall through to checkout flow - they need to create a new subscription
                 _logger.LogInformation(
-                    "Subscription updated successfully - interval changed to {NewInterval}, seats: {OldSeats} → {NewSeats}",
-                    requestedInterval, oldSeatCount, seatCount);
-
-                var intervalChanged = billingInterval == BillingInterval.Monthly ? "monthly" : "annual";
-                return new CheckoutResult
-                {
-                    Success = true,
-                    Message = $"Subscription updated to {intervalChanged} billing with {seatCount} seats"
-                };
+                    "Redirecting to checkout to create new subscription for organisation {OrganisationId}",
+                    organisationId);
             }
             else
             {
-                // Same billing interval - just update quantity
-                await subscriptionService.UpdateAsync(subscription.StripeSubscriptionId, new SubscriptionUpdateOptions
-                {
-                    Items = new List<SubscriptionItemOptions>
-                    {
-                        new SubscriptionItemOptions
-                        {
-                            Id = subscriptionItem.Id,
-                            Quantity = seatCount
-                        }
-                    },
-                    ProrationBehavior = "always_invoice" // Charge/credit immediately
-                });
-
-                // Update local database
-                subscription.PaidSeats = seatCount;
-                await _context.SaveChangesAsync();
-
+                // Subscription is verified active in Stripe - proceed with update
                 _logger.LogInformation(
-                    "Subscription updated successfully - old: {OldSeats}, new: {NewSeats}",
-                    oldSeatCount, seatCount);
+                    "Subscription verified active, updating for organisation {OrganisationId}",
+                    organisationId);
 
-                return new CheckoutResult
+                // Get the current subscription item
+                var subscriptionItem = stripeSubscription.Items.Data.FirstOrDefault();
+                if (subscriptionItem == null)
                 {
-                    Success = true,
-                    Message = seatCount > oldSeatCount
-                        ? $"Subscription upgraded to {seatCount} seats"
-                        : $"Subscription downgraded to {seatCount} seats"
-                };
+                    throw new InvalidOperationException(
+                        $"No subscription items found for subscription {subscription.StripeSubscriptionId}");
+                }
+
+                var oldSeatCount = subscription.PaidSeats;
+
+                // Check if they're trying to change billing interval
+                var currentInterval = subscriptionItem.Price.Recurring?.Interval;
+                var requestedInterval = billingInterval == BillingInterval.Monthly ? "month" : "year";
+
+                if (currentInterval != requestedInterval)
+                {
+                    // Billing interval change - fetch new price and swap it
+                    _logger.LogInformation(
+                        "Billing interval change detected ({CurrentInterval} → {RequestedInterval}), updating price",
+                        currentInterval, requestedInterval);
+
+                    var newPriceLookupKey = billingInterval == BillingInterval.Monthly
+                        ? "monthly_volume"
+                        : "annual_volume";
+
+
+                    prices = await priceService.ListAsync(new PriceListOptions
+                    {
+                        LookupKeys = new List<string> { newPriceLookupKey },
+                        Limit = 1
+                    });
+                    var newPrice = prices.FirstOrDefault();
+                    if (newPrice == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Price with lookup key {newPriceLookupKey} not found in Stripe");
+                    }
+
+                    // Update subscription with new price AND quantity
+                    await subscriptionService.UpdateAsync(subscription.StripeSubscriptionId, new SubscriptionUpdateOptions
+                    {
+                        Items = new List<SubscriptionItemOptions>
+                        {
+                            new SubscriptionItemOptions
+                            {
+                                Id = subscriptionItem.Id,
+                                Price = newPrice.Id, // Swap to new billing interval price
+                                Quantity = seatCount
+                            }
+                        },
+                        ProrationBehavior = "always_invoice" // Charge/credit immediately
+                    });
+
+                    // Update local database
+                    subscription.PaidSeats = seatCount;
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation(
+                        "Subscription updated successfully - interval changed to {NewInterval}, seats: {OldSeats} → {NewSeats}",
+                        requestedInterval, oldSeatCount, seatCount);
+
+                    var intervalChanged = billingInterval == BillingInterval.Monthly ? "monthly" : "annual";
+                    return new CheckoutResult
+                    {
+                        Success = true,
+                        Message = $"Subscription updated to {intervalChanged} billing with {seatCount} seats"
+                    };
+                }
+                else
+                {
+                    // Same billing interval - just update quantity
+                    await subscriptionService.UpdateAsync(subscription.StripeSubscriptionId, new SubscriptionUpdateOptions
+                    {
+                        Items = new List<SubscriptionItemOptions>
+                        {
+                            new SubscriptionItemOptions
+                            {
+                                Id = subscriptionItem.Id,
+                                Quantity = seatCount
+                            }
+                        },
+                        ProrationBehavior = "always_invoice" // Charge/credit immediately
+                    });
+
+                    // Update local database
+                    subscription.PaidSeats = seatCount;
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation(
+                        "Subscription updated successfully - old: {OldSeats}, new: {NewSeats}",
+                        oldSeatCount, seatCount);
+
+                    return new CheckoutResult
+                    {
+                        Success = true,
+                        Message = seatCount > oldSeatCount
+                            ? $"Subscription upgraded to {seatCount} seats"
+                            : $"Subscription downgraded to {seatCount} seats"
+                    };
+                }
             }
         }
 
@@ -363,7 +387,9 @@ public class StripeBillingService : IBillingService
                 BillingInterval = billingInterval,
                 PricePerSeat = pricePerSeat,
                 TrialEndsAt = null,
-                StripeSubscriptionId = subscription.StripeSubscriptionId
+                StripeSubscriptionId = subscription.StripeSubscriptionId,
+                CancelAtPeriodEnd = stripeSubscription.CancelAtPeriodEnd,
+                CancelAt = stripeSubscription.CancelAt
             };
         }
 
@@ -378,6 +404,80 @@ public class StripeBillingService : IBillingService
             PricePerSeat = null,
             StripeSubscriptionId = subscription.StripeSubscriptionId
         };
+    }
+
+    public async Task CancelSubscriptionAsync(Guid organisationId)
+    {
+        _logger.LogInformation("Cancelling subscription for organisation {OrganisationId}", organisationId);
+
+        var organisation = await _context.Organisations
+            .Include(o => o.Subscription)
+            .FirstOrDefaultAsync(o => o.Id == organisationId);
+
+        if (organisation?.Subscription == null)
+        {
+            throw new InvalidOperationException($"Organisation {organisationId} has no subscription");
+        }
+
+        var subscription = organisation.Subscription;
+
+        if (subscription.Status != Domain.Organisations.SubscriptionStatus.Active)
+        {
+            throw new InvalidOperationException("Only active subscriptions can be cancelled");
+        }
+
+        if (string.IsNullOrEmpty(subscription.StripeSubscriptionId))
+        {
+            throw new InvalidOperationException("Subscription has no Stripe subscription ID");
+        }
+
+        // Cancel at period end in Stripe
+        var subscriptionService = new SubscriptionService(_stripeClient);
+        await subscriptionService.UpdateAsync(subscription.StripeSubscriptionId, new SubscriptionUpdateOptions
+        {
+            CancelAtPeriodEnd = true
+        });
+
+        _logger.LogInformation(
+            "Subscription {SubscriptionId} set to cancel at period end for organisation {OrganisationId}",
+            subscription.StripeSubscriptionId, organisationId);
+    }
+
+    public async Task UncancelSubscriptionAsync(Guid organisationId)
+    {
+        _logger.LogInformation("Uncancelling subscription for organisation {OrganisationId}", organisationId);
+
+        var organisation = await _context.Organisations
+            .Include(o => o.Subscription)
+            .FirstOrDefaultAsync(o => o.Id == organisationId);
+
+        if (organisation?.Subscription == null)
+        {
+            throw new InvalidOperationException($"Organisation {organisationId} has no subscription");
+        }
+
+        var subscription = organisation.Subscription;
+
+        if (subscription.Status != Domain.Organisations.SubscriptionStatus.Active)
+        {
+            throw new InvalidOperationException("Only active subscriptions can be uncancelled");
+        }
+
+        if (string.IsNullOrEmpty(subscription.StripeSubscriptionId))
+        {
+            throw new InvalidOperationException("Subscription has no Stripe subscription ID");
+        }
+
+        // Remove cancel_at_period_end in Stripe
+        var subscriptionService = new SubscriptionService(_stripeClient);
+        await subscriptionService.UpdateAsync(subscription.StripeSubscriptionId, new SubscriptionUpdateOptions
+        {
+            CancelAtPeriodEnd = false
+        });
+
+        _logger.LogInformation(
+            "Subscription {SubscriptionId} uncancelled for organisation {OrganisationId}",
+            subscription.StripeSubscriptionId, organisationId);
     }
 
     public Task<string> CreateCustomerPortalSessionAsync(Guid organisationId)

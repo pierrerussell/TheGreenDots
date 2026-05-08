@@ -76,6 +76,48 @@ public class BillingController : ControllerBase
         }
     }
 
+    [HttpPost("subscription/{organisationId}/cancel")]
+    [Authorize]
+    public async Task<IActionResult> CancelSubscription(Guid organisationId)
+    {
+        try
+        {
+            await _billingService.CancelSubscriptionAsync(organisationId);
+            return Ok(new { message = "Subscription will be cancelled at the end of the current billing period" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to cancel subscription for organisation {OrganisationId}", organisationId);
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cancelling subscription for organisation {OrganisationId}", organisationId);
+            return StatusCode(500, new { error = "Failed to cancel subscription" });
+        }
+    }
+
+    [HttpPost("subscription/{organisationId}/uncancel")]
+    [Authorize]
+    public async Task<IActionResult> UncancelSubscription(Guid organisationId)
+    {
+        try
+        {
+            await _billingService.UncancelSubscriptionAsync(organisationId);
+            return Ok(new { message = "Subscription cancellation has been reversed" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to uncancel subscription for organisation {OrganisationId}", organisationId);
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uncancelling subscription for organisation {OrganisationId}", organisationId);
+            return StatusCode(500, new { error = "Failed to uncancel subscription" });
+        }
+    }
+
     [HttpPost("checkout")]
     [Authorize]
     public async Task<IActionResult> CreateCheckout([FromBody] CreateCheckoutRequest request)

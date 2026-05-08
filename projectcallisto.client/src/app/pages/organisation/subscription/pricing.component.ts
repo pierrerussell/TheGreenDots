@@ -12,6 +12,8 @@ interface CurrentSubscription {
   pricePerSeat?: number;
   trialEndsAt?: string;
   stripeSubscriptionId?: string;
+  cancelAtPeriodEnd: boolean;
+  cancelAt?: string;
 }
 
 @Component({
@@ -59,6 +61,7 @@ export class PricingComponent implements OnInit {
             this.currentSubscription.set({
               status: org.subscription.status,
               paidSeats: org.subscription.paidSeats,
+              cancelAtPeriodEnd: false
             });
             this.seatCount.set(org.subscription.status === 'Trial' ? 10 : org.subscription.paidSeats);
           }
@@ -221,6 +224,68 @@ export class PricingComponent implements OnInit {
         error: (error) => {
           console.error('Failed to create checkout session:', error);
           alert('Failed to start checkout. Please try again.');
+          this.loading.set(false);
+        }
+      });
+  }
+
+  cancelSubscription(): void {
+    const org = this.orgService.organisation();
+    if (!org) {
+      return;
+    }
+
+    const sub = this.currentSubscription();
+    if (!sub || sub.status !== 'Active') {
+      return;
+    }
+
+    if (!confirm('Are you sure you want to cancel your subscription? You will retain access until the end of your current billing period.')) {
+      return;
+    }
+
+    this.loading.set(true);
+
+    this.http.post<{ message: string }>(`/api/billing/subscription/${org.id}/cancel`, {})
+      .subscribe({
+        next: (result) => {
+          this.loading.set(false);
+          alert(result.message);
+          // Reload subscription data to show cancellation status
+          this.loadCurrentSubscription();
+        },
+        error: (error) => {
+          console.error('Failed to cancel subscription:', error);
+          alert('Failed to cancel subscription. Please try again.');
+          this.loading.set(false);
+        }
+      });
+  }
+
+  uncancelSubscription(): void {
+    const org = this.orgService.organisation();
+    if (!org) {
+      return;
+    }
+
+    const sub = this.currentSubscription();
+    if (!sub || sub.status !== 'Active') {
+      return;
+    }
+
+    this.loading.set(true);
+
+    this.http.post<{ message: string }>(`/api/billing/subscription/${org.id}/uncancel`, {})
+      .subscribe({
+        next: (result) => {
+          this.loading.set(false);
+          alert(result.message);
+          // Reload subscription data to show reactivated status
+          this.loadCurrentSubscription();
+        },
+        error: (error) => {
+          console.error('Failed to reactivate subscription:', error);
+          alert('Failed to reactivate subscription. Please try again.');
           this.loading.set(false);
         }
       });

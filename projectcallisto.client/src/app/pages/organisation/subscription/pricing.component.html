@@ -227,7 +227,7 @@
           <!-- CTA Button -->
           <button
             (click)="subscribe()"
-            [disabled]="loading() || !hasChanges()"
+            [disabled]="loading() || !hasChanges() || (currentSubscription()?.cancelAtPeriodEnd ?? false)"
             class="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-surface-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors mb-4"
           >
             @if (loading()) {
@@ -277,6 +277,38 @@
               <span>Cancel anytime</span>
             </div>
           </div>
+
+          <!-- Cancel/Uncancel Subscription Section -->
+          @if (currentSubscription()?.status === 'Active') {
+            <div class="mt-6 pt-6 border-t border-surface-200">
+              @if (currentSubscription()?.cancelAtPeriodEnd) {
+                <!-- Cancellation Warning -->
+                <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div class="text-sm font-medium text-yellow-900 mb-1">Subscription Cancelling</div>
+                  <div class="text-xs text-yellow-700">
+                    Your subscription will end on {{ formatDate(currentSubscription()!.cancelAt || currentSubscription()!.currentPeriodEnd!) }}. You'll retain access until then.
+                  </div>
+                </div>
+                <!-- Uncancel Button -->
+                <button
+                  (click)="uncancelSubscription()"
+                  [disabled]="loading()"
+                  class="w-full py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 disabled:text-surface-400 disabled:cursor-not-allowed rounded-lg transition-colors font-medium"
+                >
+                  Reactivate subscription
+                </button>
+              } @else {
+                <!-- Cancel Button -->
+                <button
+                  (click)="cancelSubscription()"
+                  [disabled]="loading()"
+                  class="w-full py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 disabled:text-surface-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  Cancel subscription
+                </button>
+              }
+            </div>
+          }
         </div>
 
       </div>

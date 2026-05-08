@@ -8,6 +8,10 @@ public interface IBillingService
     // Subscription details
     Task<SubscriptionDetails> GetSubscriptionAsync(Guid organisationId);
 
+    // Subscription management
+    Task CancelSubscriptionAsync(Guid organisationId);
+    Task UncancelSubscriptionAsync(Guid organisationId);
+
     // Customer Portal
     Task<string> CreateCustomerPortalSessionAsync(Guid organisationId);
 

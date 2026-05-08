@@ -9,4 +9,6 @@ public class SubscriptionDetails
     public decimal? PricePerSeat { get; set; }
     public DateTime? TrialEndsAt { get; set; }
     public string? StripeSubscriptionId { get; set; }
+    public bool CancelAtPeriodEnd { get; set; }
+    public DateTime? CancelAt { get; set; }
 }
