@@ -1,0 +1,8 @@
+<svg width="320" height="200" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- White rounded background -->
+  <rect width="320" height="200" fill="white" rx="40"/>
+
+  <!-- The Green Dots - Much Bigger, No Overlap -->
+  <circle cx="85" cy="100" r="70" fill="#22c55e"/>
+  <circle cx="235" cy="100" r="70" fill="#4ade80"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Green dots favicon -->
+  <rect width="64" height="64" fill="white" rx="12"/>
+  <circle cx="22" cy="32" r="8" fill="#22c55e"/>
+  <circle cx="42" cy="32" r="8" fill="#4ade80"/>
+</svg>
