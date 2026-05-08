@@ -243,9 +243,9 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("Content-Security-Policy",
         "default-src 'self'; " +
         "script-src 'self'; " +
-        "style-src 'self' 'unsafe-inline'; " + // Angular needs unsafe-inline for component styles
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " + // Angular needs unsafe-inline, allow Google Fonts
         "img-src 'self' data:; " + // Allow data URIs for inline images
-        "font-src 'self'; " +
+        "font-src 'self' data: https://fonts.gstatic.com; " + // Allow Google Fonts and data URIs
         "connect-src 'self'; " + // Allow API calls to same origin
         "frame-ancestors 'none'; " + // Same as X-Frame-Options: DENY
         "base-uri 'self'; " +
