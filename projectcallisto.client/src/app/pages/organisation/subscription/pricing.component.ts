@@ -290,4 +290,26 @@ export class PricingComponent implements OnInit {
         }
       });
   }
+
+  openCustomerPortal(): void {
+    const org = this.orgService.organisation();
+    if (!org) {
+      return;
+    }
+
+    this.loading.set(true);
+
+    this.http.post<{ url: string }>(`/api/billing/customer-portal/${org.id}`, {})
+      .subscribe({
+        next: (result) => {
+          // Redirect to Stripe Customer Portal
+          window.location.href = result.url;
+        },
+        error: (error) => {
+          console.error('Failed to open customer portal:', error);
+          alert('Failed to open customer portal. Please try again.');
+          this.loading.set(false);
+        }
+      });
+  }
 }

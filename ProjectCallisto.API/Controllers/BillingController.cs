@@ -147,6 +147,27 @@ public class BillingController : ControllerBase
             return StatusCode(500, new { error = "Failed to create checkout session" });
         }
     }
+
+    [HttpPost("customer-portal/{organisationId}")]
+    [Authorize]
+    public async Task<IActionResult> CreateCustomerPortalSession(Guid organisationId)
+    {
+        try
+        {
+            var portalUrl = await _billingService.CreateCustomerPortalSessionAsync(organisationId);
+            return Ok(new { url = portalUrl });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to create customer portal session for organisation {OrganisationId}", organisationId);
+            return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating customer portal session for organisation {OrganisationId}", organisationId);
+            return StatusCode(500, new { error = "Failed to create customer portal session" });
+        }
+    }
 }
 
 public class CreateCheckoutRequest

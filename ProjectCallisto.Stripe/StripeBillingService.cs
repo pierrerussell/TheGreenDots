@@ -5,6 +5,9 @@ using ProjectCallisto.Application.Billing;
 using ProjectCallisto.EfCore;
 using Stripe;
 using Stripe.Checkout;
+using BillingPortalSessionService = Stripe.BillingPortal.SessionService;
+using BillingPortalSessionOptions = Stripe.BillingPortal.SessionCreateOptions;
+using CheckoutSessionService = Stripe.Checkout.SessionService;
 
 namespace ProjectCallisto.Stripe;
 
@@ -233,7 +236,7 @@ public class StripeBillingService : IBillingService
         var customerId = await GetOrCreateCustomerAsync(organisation);
 
         // Create checkout session
-        var sessionService = new SessionService(_stripeClient);
+        var sessionService = new CheckoutSessionService(_stripeClient);
         var successUrl = $"{_stripeOptions.CheckoutSuccessUrl}/organisation/{organisationId}/subscription?session_id={{CHECKOUT_SESSION_ID}}";
         var cancelUrl = $"{_stripeOptions.CheckoutCancelUrl}/organisation/{organisationId}/pricing";
 
@@ -492,9 +495,39 @@ public class StripeBillingService : IBillingService
             subscription.StripeSubscriptionId, organisationId);
     }
 
-    public Task<string> CreateCustomerPortalSessionAsync(Guid organisationId)
+    public async Task<string> CreateCustomerPortalSessionAsync(Guid organisationId)
     {
-        throw new NotImplementedException();
+        _logger.LogInformation("Creating customer portal session for organisation {OrganisationId}", organisationId);
+
+        var organisation = await _context.Organisations
+            .Include(o => o.Subscription)
+            .FirstOrDefaultAsync(o => o.Id == organisationId);
+
+        if (organisation == null)
+        {
+            throw new InvalidOperationException($"Organisation {organisationId} not found");
+        }
+
+        // Ensure customer exists in Stripe
+        var customerId = await GetOrCreateCustomerAsync(organisation);
+
+        // Create portal session
+        var portalService = new BillingPortalSessionService(_stripeClient);
+        var returnUrl = $"{_stripeOptions.CheckoutSuccessUrl}/organisation/{organisationId}/subscription";
+
+        var options = new BillingPortalSessionOptions
+        {
+            Customer = customerId,
+            ReturnUrl = returnUrl
+        };
+
+        var session = await portalService.CreateAsync(options);
+
+        _logger.LogInformation(
+            "Customer portal session created: {SessionId} for organisation {OrganisationId}",
+            session.Id, organisationId);
+
+        return session.Url;
     }
 
     public async Task HandleWebhookEventAsync(string json, string signature)
