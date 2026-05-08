@@ -3,6 +3,7 @@
     <Project Path="ProjectCallisto.AzureQueue/ProjectCallisto.AzureQueue.csproj" />
     <Project Path="ProjectCallisto.EfCore/ProjectCallisto.EfCore.csproj" />
     <Project Path="ProjectCallisto.Resend/ProjectCallisto.Resend.csproj" />
+    <Project Path="ProjectCallisto.Stripe/ProjectCallisto.Stripe.csproj" />
   </Folder>
   <Project Path="ProjectCallisto.API/ProjectCallisto.API.csproj" />
   <Project Path="ProjectCallisto.Application/ProjectCallisto.Application.csproj" />

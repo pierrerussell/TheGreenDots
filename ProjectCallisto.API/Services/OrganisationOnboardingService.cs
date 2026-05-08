@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 using ProjectCallisto.Application.Microsoft;
@@ -60,7 +61,8 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
 
         // Fetch and store tenant members
         var graphUsers = await FetchTenantUsersAsync(token.AccessToken);
-        var tenantMembers = await CreateTenantMembersAsync(organisation.Id, graphUsers);
+        var hasTrialSeats = organisation.Subscription?.PaidSeats > 0;
+        var tenantMembers = await CreateTenantMembersAsync(organisation.Id, graphUsers, hasTrialSeats);
 
         await _dbContext.SaveChangesAsync();
 
@@ -175,11 +177,37 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
         Guid activeConnectionId,
         string? country)
     {
+        // Check if this Microsoft tenant has already used a trial
+        var existingOrg = await _dbContext.Organisations
+            .AnyAsync(o => o.TenantId == tenantId);
+
+        int trialSeats;
+        DateTimeOffset? trialEndsAt;
+
+        if (existingOrg)
+        {
+            // Tenant already exists - no trial allowed
+            trialSeats = 0;
+            trialEndsAt = DateTimeOffset.UtcNow; // Already expired
+        }
+        else
+        {
+            // First time for this tenant - grant trial
+            trialSeats = 999;
+            trialEndsAt = null; // Will be set by Subscription constructor
+        }
+
         var organisation = new Organisation(
             name: name,
             microsoftTenantId: tenantId,
             connectionId: activeConnectionId,
-            trialSeats: 999);
+            trialSeats: trialSeats);
+
+        // If no trial, manually override trial end date
+        if (existingOrg && organisation.Subscription != null)
+        {
+            organisation.Subscription.TrialEndsAt = trialEndsAt;
+        }
 
         // Set country and derive timezone
         if (!string.IsNullOrEmpty(country))
@@ -278,7 +306,7 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
         return users;
     }
 
-    private async Task<List<TenantMember>> CreateTenantMembersAsync(Guid organisationId, List<GraphUser> graphUsers)
+    private async Task<List<TenantMember>> CreateTenantMembersAsync(Guid organisationId, List<GraphUser> graphUsers, bool hasTrialSeats)
     {
         var tenantMembers = graphUsers.Select(u => new TenantMember
         {
@@ -287,7 +315,9 @@ public class OrganisationOnboardingService : IOrganisationOnboardingService
             DisplayName = u.DisplayName ?? "Unknown",
             Email = u.Mail,
             JobTitle = u.JobTitle,
-            IsAssignedSeat = true, // Auto-assign all members during onboarding (trial = unlimited seats)
+            // Only auto-assign seats if trial is available (hasTrialSeats = true)
+            // If tenant already used trial (hasTrialSeats = false), members must manually be assigned seats
+            IsAssignedSeat = hasTrialSeats,
             CreatedAt = DateTimeOffset.UtcNow
         }).ToList();
 

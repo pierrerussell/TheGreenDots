@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<WorkingHours> WorkingHours { get; set; }
     public DbSet<EmailReportSettings> EmailReportSettings { get; set; }
     public DbSet<EmailRecipient> EmailRecipients { get; set; }
+    public DbSet<WebhookEvent> WebhookEvents { get; set; }
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {}
 
@@ -195,6 +196,22 @@ public class AppDbContext : DbContext
                 .HasMaxLength(256);
             // Prevent duplicate emails per settings
             builder.HasIndex(x => new { x.EmailReportSettingsId, x.Email })
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<WebhookEvent>(builder =>
+        {
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.StripeEventId)
+                .HasMaxLength(256)
+                .IsRequired();
+            builder.Property(x => x.EventType)
+                .HasMaxLength(128)
+                .IsRequired();
+            builder.Property(x => x.ProcessedAt)
+                .IsRequired();
+            // Unique constraint - prevents duplicate event processing
+            builder.HasIndex(x => x.StripeEventId)
                 .IsUnique();
         });
 

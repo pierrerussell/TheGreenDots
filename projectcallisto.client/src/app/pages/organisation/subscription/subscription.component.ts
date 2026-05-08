@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { OrganisationService } from '../organisation.service';
 
 interface Subscription {
@@ -21,6 +22,7 @@ interface Subscription {
 })
 export class SubscriptionComponent implements OnInit {
   private http = inject(HttpClient);
+  private router = inject(Router);
   orgService = inject(OrganisationService);
 
   subscription = signal<Subscription | null>(null);
@@ -96,7 +98,10 @@ export class SubscriptionComponent implements OnInit {
   }
 
   upgradePlan(): void {
-    // TODO: Show upgrade modal or redirect to upgrade page
-    console.log('Upgrading plan...');
+    const org = this.orgService.organisation();
+    if (!org) return;
+
+    // Navigate to pricing page
+    this.router.navigate(['/organisation', org.id, 'pricing']);
   }
 }

@@ -2,7 +2,7 @@ import { Component, signal, inject, OnInit, OnDestroy, effect } from '@angular/c
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
-type Step = 'connect' | 'loading' | 'preview' | 'timezone' | 'working-hours' | 'pricing';
+type Step = 'connect' | 'loading' | 'preview' | 'timezone' | 'working-hours' | 'trial-status';
 
 export interface TeamMember {
   id: string;
@@ -18,6 +18,13 @@ interface Organisation {
   name: string;
   tenantId: string;
   timezone: string;
+}
+
+interface Subscription {
+  id: string;
+  status: 'Trial' | 'Active' | 'PastDue' | 'Cancelled';
+  paidSeats: number;
+  trialEndsAt: string | null;
 }
 
 interface WorkingHours {
@@ -40,7 +47,6 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
   private timeUpdateInterval: any = null;
 
   currentStep = signal<Step>('connect');
-  selectedPlan = signal<'trial' | 'basic'>('trial');
   loadingMessage = signal('Connecting to Microsoft...');
   tenantName = signal('Contoso Ltd');
   teamMembers = signal<TeamMember[]>([]);
@@ -49,6 +55,7 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
   selectedTimezone = signal('UTC');
   autoDetectedTimezone = signal('UTC');
   currentTimeInTimezone = signal('');
+  subscription = signal<Subscription | null>(null);
 
   // Working hours with smart defaults (9 AM - 5 PM, Mon-Fri)
   workingHours = signal<WorkingHours>({
@@ -95,10 +102,10 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
     { id: 'preview' as Step, label: 'Preview' },
     { id: 'timezone' as Step, label: 'Timezone' },
     { id: 'working-hours' as Step, label: 'Working Hours' },
-    { id: 'pricing' as Step, label: 'Plan' },
+    { id: 'trial-status' as Step, label: 'Trial Status' },
   ];
 
-  private stepOrder: Step[] = ['connect', 'loading', 'preview', 'timezone', 'working-hours', 'pricing'];
+  private stepOrder: Step[] = ['connect', 'loading', 'preview', 'timezone', 'working-hours', 'trial-status'];
 
   constructor() {
     // Update time when on timezone step
@@ -137,6 +144,7 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
         this.autoDetectedTimezone.set(detectedTimezone);
         this.selectedTimezone.set(detectedTimezone);
         this.updateCurrentTime();
+        this.loadSubscription(orgId);
         this.loadMembers(orgId);
       },
       error: (err) => {
@@ -146,11 +154,23 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadSubscription(orgId: string): void {
+    this.http.get<Subscription>(`/api/organisations/${orgId}/subscription`).subscribe({
+      next: (subscription) => {
+        this.subscription.set(subscription);
+      },
+      error: (err) => {
+        console.error('Failed to load subscription', err);
+        // Continue anyway - we'll show a generic message
+      },
+    });
+  }
+
   private loadMembers(orgId: string): void {
     this.loadingMessage.set('Loading team members...');
 
-    // Use members endpoint (returns live presence, all members auto-assigned during trial)
-    this.http.get<TeamMember[]>(`/api/organisations/${orgId}/members`).subscribe({
+    // Use preview endpoint (returns ALL members with live presence, regardless of IsAssignedSeat)
+    this.http.get<TeamMember[]>(`/api/organisations/${orgId}/members/preview`).subscribe({
       next: (members) => {
         this.teamMembers.set(members);
         this.currentStep.set('preview');
@@ -222,8 +242,8 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
     }
   }
 
-  continueToPricing(): void {
-    this.currentStep.set('pricing');
+  continueToTrialStatus(): void {
+    this.currentStep.set('trial-status');
   }
 
   onTimezoneChange(timezone: string): void {
@@ -253,18 +273,14 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
     }
   }
 
-  selectPlan(plan: 'trial' | 'basic'): void {
-    this.selectedPlan.set(plan);
-  }
-
-  async completeSetup(): Promise<void> {
+  async saveWorkingHoursAndContinue(): Promise<void> {
     const orgIdValue = this.orgId();
     if (!orgIdValue) {
       console.error('No organisation ID available');
       return;
     }
 
-    // Save working hours before completing setup
+    // Save working hours before continuing
     try {
       const wh = this.workingHours();
       if (wh.workingDays.length === 0) {
@@ -282,14 +298,52 @@ export class AddOrganizationComponent implements OnInit, OnDestroy {
         .put<WorkingHours>(`/api/organisations/${orgIdValue}/working-hours`, payload)
         .toPromise();
 
-      // All members already have seats assigned during trial onboarding
-      // TODO: Create subscription with selected plan
-      console.log('Completing setup with plan:', this.selectedPlan());
-      this.router.navigate(['/organisation', orgIdValue, 'overview']);
+      this.continueToTrialStatus();
     } catch (err) {
-      console.error('Failed to complete setup', err);
-      alert('Failed to complete setup. Please try again.');
+      console.error('Failed to save working hours', err);
+      alert('Failed to save working hours. Please try again.');
     }
+  }
+
+  goToDashboard(): void {
+    const orgIdValue = this.orgId();
+    if (orgIdValue) {
+      this.router.navigate(['/organisation', orgIdValue, 'overview']);
+    }
+  }
+
+  goToPricing(): void {
+    const orgIdValue = this.orgId();
+    if (orgIdValue) {
+      this.router.navigate(['/organisation', orgIdValue, 'pricing']);
+    }
+  }
+
+  hasActiveTrial(): boolean {
+    const sub = this.subscription();
+    if (!sub) return false;
+
+    // Trial is active if:
+    // 1. Has paid seats (PaidSeats > 0)
+    // 2. Trial hasn't expired (TrialEndsAt is in the future)
+    if (sub.paidSeats > 0 && sub.trialEndsAt) {
+      const trialEnd = new Date(sub.trialEndsAt);
+      return trialEnd > new Date();
+    }
+
+    return false;
+  }
+
+  getTrialExpiryDate(): string {
+    const sub = this.subscription();
+    if (!sub || !sub.trialEndsAt) return '';
+
+    const expiryDate = new Date(sub.trialEndsAt);
+    return expiryDate.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
   }
 
   toggleWorkingDay(day: string): void {
