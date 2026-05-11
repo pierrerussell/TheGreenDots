@@ -1,0 +1,266 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout
+  title="Check Teams Status History | See When Team Was Online"
+  description="Check when your team members were online in Microsoft Teams. View complete status history including Available, Busy, Away, and Offline periods with timestamps."
+>
+  <Header />
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="status-dot status-available"></span>
+          <span>Real-Time + Historical</span>
+        </div>
+
+        <h1 class="hero-title">
+          Check When Your Team<br>Was <span class="gradient-text">Online</span> in Teams
+        </h1>
+
+        <p class="hero-subtitle">
+          See exactly when each team member was Available, Busy, Away, or Offline. Check Teams status history for today, yesterday, or any date in the past.
+        </p>
+
+        <div class="hero-cta">
+          <a href="https://app.thegreendots.io" class="btn-primary btn-large">
+            Check Status History Now
+          </a>
+          <div class="trust-signals">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+            </svg>
+            <span>Setup in 5 minutes</span>
+            <span class="divider">•</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+            </svg>
+            <span>Privacy-first tracking</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="timeline-demo">
+          <div class="timeline-header">
+            <span class="timeline-title">Status Check: May 11, 2026</span>
+            <span class="timeline-live">
+              <span class="pulse-dot"></span>
+              Historical
+            </span>
+          </div>
+          <div class="timeline-rows">
+            <div class="timeline-row">
+              <div class="timeline-label">
+                <div class="avatar">A</div>
+                <span>Alice</span>
+              </div>
+              <div class="timeline-bar">
+                <div class="timeline-segment offline" style="width: 15%"></div>
+                <div class="timeline-segment available" style="width: 40%"></div>
+                <div class="timeline-segment busy" style="width: 30%"></div>
+                <div class="timeline-segment away" style="width: 15%"></div>
+              </div>
+            </div>
+            <div class="timeline-row">
+              <div class="timeline-label">
+                <div class="avatar">B</div>
+                <span>Bob</span>
+              </div>
+              <div class="timeline-bar">
+                <div class="timeline-segment offline" style="width: 20%"></div>
+                <div class="timeline-segment available" style="width: 35%"></div>
+                <div class="timeline-segment busy" style="width: 25%"></div>
+                <div class="timeline-segment available" style="width: 20%"></div>
+              </div>
+            </div>
+            <div class="timeline-row">
+              <div class="timeline-label">
+                <div class="avatar">C</div>
+                <span>Carol</span>
+              </div>
+              <div class="timeline-bar">
+                <div class="timeline-segment available" style="width: 45%"></div>
+                <div class="timeline-segment busy" style="width: 30%"></div>
+                <div class="timeline-segment away" style="width: 15%"></div>
+                <div class="timeline-segment offline" style="width: 10%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">How to Check Teams Status History</h2>
+        <p class="section-subtitle">Microsoft Teams doesn't save status history. Here's how The Green Dots makes it possible.</p>
+      </div>
+
+      <div class="features-grid">
+        <article class="feature-card">
+          <div class="feature-icon">
+            <div style="background: var(--green-100); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: var(--green-700);">1</div>
+          </div>
+          <h3 class="feature-title">Automatic Status Polling</h3>
+          <p class="feature-description">
+            The Green Dots checks each team member's status every 2 minutes via Microsoft Graph API. Every change is captured and timestamped.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">
+            <div style="background: var(--green-100); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: var(--green-700);">2</div>
+          </div>
+          <h3 class="feature-title">Select Date & Team Member</h3>
+          <p class="feature-description">
+            Pick any date in the past and any team member. Instantly see their complete status timeline for that day with exact timestamps.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">
+            <div style="background: var(--green-100); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: var(--green-700);">3</div>
+          </div>
+          <h3 class="feature-title">View Color-Coded Timeline</h3>
+          <p class="feature-description">
+            See Available (green), Busy (red), Away (yellow), and Offline (gray) periods at a glance. Hover for exact times and durations.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 5rem 0; background: var(--surface-50);">
+    <div class="container">
+      <div style="max-width: 800px; margin: 0 auto;">
+        <h2 class="section-title" style="text-align: center; margin-bottom: 3rem;">Common Use Cases</h2>
+
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+          <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid var(--surface-200);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--surface-900); margin-bottom: 0.75rem;">Remote Team Coordination</h3>
+            <p style="color: var(--surface-700); line-height: 1.7;">
+              Check when distributed team members are typically online to find the best meeting times across timezones. Identify overlapping availability windows.
+            </p>
+          </div>
+
+          <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid var(--surface-200);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--surface-900); margin-bottom: 0.75rem;">Work-Life Balance Monitoring</h3>
+            <p style="color: var(--surface-700); line-height: 1.7;">
+              Ensure team members aren't working excessive hours. Check if status shows "Available" late at night or on weekends—a sign of potential burnout.
+            </p>
+          </div>
+
+          <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid var(--surface-200);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--surface-900); margin-bottom: 0.75rem;">Attendance Verification</h3>
+            <p style="color: var(--surface-700); line-height: 1.7;">
+              Verify that remote employees are working their scheduled hours. Check status history to confirm presence during expected work times.
+            </p>
+          </div>
+
+          <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid var(--surface-200);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--surface-900); margin-bottom: 0.75rem;">Project Timeline Analysis</h3>
+            <p style="color: var(--surface-700); line-height: 1.7;">
+              Review when team members were actively working on projects. Cross-reference status history with project deadlines to understand work patterns.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq">
+    <div class="container">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+
+      <dl class="faq-list">
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Can I check someone's Teams status without them knowing?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              We recommend transparent communication. While Teams status is already visible to all team members, we suggest notifying your team that presence history is being tracked for coordination and work-life balance purposes.
+            </div>
+          </dd>
+        </div>
+
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>How accurate is the status history?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              Status is checked every 2 minutes, providing 720 data points per 24-hour period. This captures the vast majority of status changes with 99%+ accuracy.
+            </div>
+          </dd>
+        </div>
+
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Can users fake their status?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              Yes, users can manually set custom statuses or use tools to keep their status "Available." The Green Dots tracks whatever Microsoft Teams reports. We recommend using presence data as one of many team coordination tools, not for performance reviews.
+            </div>
+          </dd>
+        </div>
+
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Does this work with the free version of Teams?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              <strong>No.</strong> The Green Dots requires Microsoft 365 Business, Enterprise, or Education with access to the Microsoft Graph API. The free consumer version of Teams is not supported.
+            </div>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="cta-final">
+    <div class="container">
+      <div class="cta-content">
+        <h2 class="cta-title">Check Your Team's Status History Today</h2>
+        <p class="cta-subtitle">
+          Setup takes 5 minutes. Start tracking immediately.
+        </p>
+        <a href="https://app.thegreendots.io" class="btn-primary btn-large">
+          Start 7-Day Free Trial
+        </a>
+        <p class="cta-note">$2 per user per month after trial • Cancel anytime</p>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Layout>

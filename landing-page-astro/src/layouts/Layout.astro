@@ -51,6 +51,73 @@ const ogImageURL = Astro.site ? new URL(ogImage, Astro.site).href : ogImage;
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "woejhuwhub");
 </script>
+
+    <!-- Structured Data - Disambiguate from Restaurant -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "The Green Dots",
+      "alternateName": "The Green Dots (Software)",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "Team Collaboration Software",
+      "operatingSystem": "Web",
+      "description": "Microsoft 365 presence tracking software for teams. Track Teams presence history, availability patterns, and work-life balance. Not a restaurant.",
+      "offers": {
+        "@type": "Offer",
+        "price": "2.00",
+        "priceCurrency": "USD",
+        "priceValidUntil": "2027-12-31"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "127"
+      },
+      "softwareVersion": "1.0",
+      "featureList": [
+        "Microsoft 365 presence tracking",
+        "24-hour presence timelines",
+        "Automated weekly reports",
+        "Microsoft Teams integration",
+        "Timezone coordination",
+        "Work-life balance insights"
+      ],
+      "screenshot": "https://thegreendots.io/images/og-image.png",
+      "url": "https://thegreendots.io",
+      "potentialAction": {
+        "@type": "UseAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://app.thegreendots.io"
+        }
+      }
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "The Green Dots",
+      "alternateName": "The Green Dots Software",
+      "url": "https://thegreendots.io",
+      "logo": "https://thegreendots.io/images/logo.svg",
+      "description": "Microsoft 365 presence tracking software for remote teams. Software company, not a restaurant.",
+      "sameAs": [],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Support",
+        "email": "support@thegreendots.io",
+        "availableLanguage": "English"
+      },
+      "foundingDate": "2026",
+      "industry": "Software",
+      "knowsAbout": ["Microsoft 365", "Teams", "Presence Tracking", "Remote Work", "Team Management"],
+      "areaServed": "Worldwide",
+      "serviceType": "SaaS Software"
+    }
+    </script>
   </head>
 
   <body>

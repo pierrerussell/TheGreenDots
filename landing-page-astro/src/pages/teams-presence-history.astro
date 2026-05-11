@@ -6,42 +6,40 @@ import Footer from '../components/Footer.astro';
 
 <Layout
   title="Track Microsoft Teams Presence History | The Green Dots"
-  description="Track Microsoft Teams presence history that Microsoft doesn't save. View 24-hour timelines, check status history, and monitor team availability. 7-day free trial."
+  description="View complete Microsoft Teams presence history that Microsoft doesn't save. Track when team members were Available, Busy, Away, or Offline with 24-hour timelines."
 >
   <Header />
 
-  <!-- Hero Section -->
   <section class="hero">
     <div class="container">
       <div class="hero-content">
         <div class="hero-badge">
           <span class="status-dot status-available"></span>
-          <span>For Microsoft Teams</span>
+          <span>Microsoft Teams Integration</span>
         </div>
 
         <h1 class="hero-title">
-          See When Your Team<br>Was Actually <span class="gradient-text">Online</span>
+          Track Microsoft Teams<br>Presence History
         </h1>
 
         <p class="hero-subtitle">
-          The Green Dots captures the historical presence data Microsoft doesn't save.<br>
-          Get 24-hour timelines, automated reports, and team availability insights.
+          Microsoft Teams doesn't save presence history. The Green Dots captures every status change—Available, Busy, Away, Offline—with 24-hour timelines you can review anytime.
         </p>
 
         <div class="hero-cta">
           <a href="https://app.thegreendots.io" class="btn-primary btn-large">
-            Start Free 7-Day Trial
+            Start Tracking Presence History
           </a>
           <div class="trust-signals">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
             </svg>
-            <span>No credit card required</span>
+            <span>7-day free trial</span>
             <span class="divider">•</span>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
             </svg>
-            <span>Privacy-first</span>
+            <span>No credit card required</span>
           </div>
         </div>
       </div>
@@ -49,7 +47,7 @@ import Footer from '../components/Footer.astro';
       <div class="hero-visual">
         <div class="timeline-demo">
           <div class="timeline-header">
-            <span class="timeline-title">Your Team's Presence Today</span>
+            <span class="timeline-title">Today's Presence History</span>
             <span class="timeline-live">
               <span class="pulse-dot"></span>
               Live
@@ -100,12 +98,11 @@ import Footer from '../components/Footer.astro';
     </div>
   </section>
 
-  <!-- Features Section -->
-  <section class="features" id="features">
+  <section class="features">
     <div class="container">
       <div class="section-header">
-        <h2 class="section-title">Everything you need to understand team presence</h2>
-        <p class="section-subtitle">Powerful insights without invasive monitoring</p>
+        <h2 class="section-title">Why Track Teams Presence History?</h2>
+        <p class="section-subtitle">Microsoft Teams only shows real-time status. Once it changes, the data is gone forever.</p>
       </div>
 
       <div class="features-grid">
@@ -118,24 +115,9 @@ import Footer from '../components/Footer.astro';
               <line x1="8" y1="21" x2="20" y2="21"/>
             </svg>
           </div>
-          <h3 class="feature-title">24-Hour Presence Timelines</h3>
+          <h3 class="feature-title">Complete Presence History</h3>
           <p class="feature-description">
-            Visual heatmaps showing when each team member was Available, Busy, Away, or Offline. Historical data Microsoft doesn't provide.
-          </p>
-        </article>
-
-        <article class="feature-card">
-          <div class="feature-icon">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="6" y="4" width="20" height="24" rx="2"/>
-              <line x1="10" y1="10" x2="22" y2="10"/>
-              <line x1="10" y1="15" x2="18" y2="15"/>
-              <line x1="10" y1="20" x2="22" y2="20"/>
-            </svg>
-          </div>
-          <h3 class="feature-title">Automated Weekly Reports</h3>
-          <p class="feature-description">
-            Email digests delivered every Monday with presence summaries, overtime alerts, and work-life balance insights.
+            View exactly when each team member was Available, Busy, Away, or Offline. Every status change captured and stored permanently.
           </p>
         </article>
 
@@ -146,17 +128,28 @@ import Footer from '../components/Footer.astro';
               <path d="M16 8v8l4 4"/>
             </svg>
           </div>
-          <h3 class="feature-title">Timezone Coordination</h3>
+          <h3 class="feature-title">24-Hour Timeline View</h3>
           <p class="feature-description">
-            Identify peak team availability windows across distributed teams. Support for 35+ countries.
+            Visual heatmaps show presence patterns throughout the day. Quickly spot work hours, meetings, and availability windows.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12h24M4 20h24M12 4v24"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Historical Reports</h3>
+          <p class="feature-description">
+            Access presence data from weeks or months ago. Export to CSV for analysis or compliance documentation.
           </p>
         </article>
       </div>
     </div>
   </section>
 
-  <!-- FAQ Section -->
-  <section class="faq" id="faq">
+  <section class="faq">
     <div class="container">
       <h2 class="section-title">Frequently Asked Questions</h2>
 
@@ -164,7 +157,7 @@ import Footer from '../components/Footer.astro';
         <div class="faq-item">
           <dt class="faq-question">
             <button class="faq-toggle" aria-expanded="false">
-              <span>What is Microsoft 365 presence tracking?</span>
+              <span>Does Microsoft Teams track presence history?</span>
               <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 10 13 14 9"/>
               </svg>
@@ -172,7 +165,7 @@ import Footer from '../components/Footer.astro';
           </dt>
           <dd class="faq-answer">
             <div class="faq-content">
-              Microsoft 365 presence tracking monitors when team members are Available, Busy, Away, or Offline in Teams. The Green Dots captures historical data that Microsoft doesn't save.
+              <strong>No.</strong> Microsoft Teams only shows real-time presence status. The moment your status changes, the previous data is lost forever. There's no built-in way to view historical presence data in Teams.
             </div>
           </dd>
         </div>
@@ -180,7 +173,7 @@ import Footer from '../components/Footer.astro';
         <div class="faq-item">
           <dt class="faq-question">
             <button class="faq-toggle" aria-expanded="false">
-              <span>Does The Green Dots take screenshots?</span>
+              <span>How does The Green Dots track presence history?</span>
               <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 10 13 14 9"/>
               </svg>
@@ -188,7 +181,7 @@ import Footer from '../components/Footer.astro';
           </dt>
           <dd class="faq-answer">
             <div class="faq-content">
-              <strong>No.</strong> We only track presence status from Microsoft 365. No screenshots, no keylogging, no invasive monitoring.
+              The Green Dots polls the Microsoft Graph API every 2 minutes to capture presence status changes. We store this data securely, allowing you to view complete 24-hour timelines and historical reports.
             </div>
           </dd>
         </div>
@@ -196,7 +189,7 @@ import Footer from '../components/Footer.astro';
         <div class="faq-item">
           <dt class="faq-question">
             <button class="faq-toggle" aria-expanded="false">
-              <span>How much does it cost?</span>
+              <span>How far back can I view presence history?</span>
               <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 10 13 14 9"/>
               </svg>
@@ -204,7 +197,23 @@ import Footer from '../components/Footer.astro';
           </dt>
           <dd class="faq-answer">
             <div class="faq-content">
-              <strong>$2.00 per seat per month</strong> for teams of 5-24. Volume discounts available. 7-day free trial, no credit card required.
+              You can view presence history for as long as your subscription has been active. Data is stored permanently and can be exported to CSV at any time. Unlimited historical lookback.
+            </div>
+          </dd>
+        </div>
+
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Is tracking Teams presence legal?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              <strong>Yes</strong>, as long as you notify employees. Presence status (Available/Busy/Away/Offline) is already visible to all team members in Teams. The Green Dots simply stores this data for historical reference. We recommend transparent communication with your team.
             </div>
           </dd>
         </div>
@@ -212,18 +221,17 @@ import Footer from '../components/Footer.astro';
     </div>
   </section>
 
-  <!-- Final CTA -->
   <section class="cta-final">
     <div class="container">
       <div class="cta-content">
-        <h2 class="cta-title">Stop Flying Blind With Your Remote Team</h2>
+        <h2 class="cta-title">Start Tracking Teams Presence History Today</h2>
         <p class="cta-subtitle">
-          Get visibility into team presence patterns without invasive monitoring.
+          7-day free trial. No credit card required. Setup takes 5 minutes.
         </p>
         <a href="https://app.thegreendots.io" class="btn-primary btn-large">
-          Start Free 7-Day Trial
+          Start Free Trial
         </a>
-        <p class="cta-note">No credit card required • Cancel anytime</p>
+        <p class="cta-note">Works with Microsoft 365 Business, Enterprise, and Education</p>
       </div>
     </div>
   </section>

@@ -1,0 +1,304 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout
+  title="Track Team Availability | Microsoft Teams Presence Monitoring"
+  description="Track team availability across timezones with Microsoft Teams presence monitoring. Find peak availability windows, optimize meeting times, and improve remote team coordination."
+>
+  <Header />
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="status-dot status-available"></span>
+          <span>35+ Countries Supported</span>
+        </div>
+
+        <h1 class="hero-title">
+          Track Team Availability<br>Across <span class="gradient-text">Timezones</span>
+        </h1>
+
+        <p class="hero-subtitle">
+          Stop guessing when your distributed team is available. The Green Dots analyzes Microsoft Teams presence patterns to find optimal meeting times and availability windows.
+        </p>
+
+        <div class="hero-cta">
+          <a href="https://app.thegreendots.io" class="btn-primary btn-large">
+            Start Tracking Availability
+          </a>
+          <div class="trust-signals">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+            </svg>
+            <span>Works globally</span>
+            <span class="divider">•</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+            </svg>
+            <span>7-day free trial</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="timeline-demo">
+          <div class="timeline-header">
+            <span class="timeline-title">Global Team Availability</span>
+            <span class="timeline-live">
+              <span class="pulse-dot"></span>
+              Live
+            </span>
+          </div>
+          <div class="timeline-rows">
+            <div class="timeline-row">
+              <div class="timeline-label">
+                <div class="avatar">🇺🇸</div>
+                <span>US Team</span>
+              </div>
+              <div class="timeline-bar">
+                <div class="timeline-segment offline" style="width: 40%"></div>
+                <div class="timeline-segment available" style="width: 45%"></div>
+                <div class="timeline-segment offline" style="width: 15%"></div>
+              </div>
+            </div>
+            <div class="timeline-row">
+              <div class="timeline-label">
+                <div class="avatar">🇬🇧</div>
+                <span>UK Team</span>
+              </div>
+              <div class="timeline-bar">
+                <div class="timeline-segment offline" style="width: 25%"></div>
+                <div class="timeline-segment available" style="width: 50%"></div>
+                <div class="timeline-segment offline" style="width: 25%"></div>
+              </div>
+            </div>
+            <div class="timeline-row">
+              <div class="timeline-label">
+                <div class="avatar">🇦🇺</div>
+                <span>AU Team</span>
+              </div>
+              <div class="timeline-bar">
+                <div class="timeline-segment available" style="width: 50%"></div>
+                <div class="timeline-segment offline" style="width: 40%"></div>
+                <div class="timeline-segment available" style="width: 10%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Availability Tracking Features</h2>
+        <p class="section-subtitle">Built for distributed teams working across multiple timezones</p>
+      </div>
+
+      <div class="features-grid">
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="16" cy="16" r="12"/>
+              <path d="M16 8v8l4 4"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Peak Availability Windows</h3>
+          <p class="feature-description">
+            Automatically identify 2-3 hour windows where 80%+ of your team is Available. Perfect for scheduling all-hands meetings.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h24v24H4z"/>
+              <path d="M10 4v6M22 4v6M4 10h24"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Timezone Intelligence</h3>
+          <p class="feature-description">
+            View each team member's local timezone and typical work hours. Avoid scheduling meetings at 3 AM for remote employees.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="6" width="26" height="20" rx="2"/>
+              <line x1="3" y1="11" x2="29" y2="11"/>
+              <line x1="8" y1="16" x2="24" y2="16"/>
+              <line x1="8" y1="21" x2="20" y2="21"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Weekly Availability Reports</h3>
+          <p class="feature-description">
+            Automated email reports every Monday showing team availability patterns, peak hours, and optimal meeting slots.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 5rem 0; background: white;">
+    <div class="container">
+      <div style="max-width: 900px; margin: 0 auto;">
+        <h2 class="section-title" style="text-align: center; margin-bottom: 3rem;">How It Works</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 3rem;">
+          <div style="text-align: center;">
+            <div style="width: 64px; height: 64px; background: var(--green-100); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; font-weight: 800; color: var(--green-700);">1</div>
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem;">Connect Microsoft 365</h3>
+            <p style="color: var(--surface-700); line-height: 1.6;">Authenticate with your Microsoft 365 account. We securely access presence data via Microsoft Graph API.</p>
+          </div>
+
+          <div style="text-align: center;">
+            <div style="width: 64px; height: 64px; background: var(--green-100); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; font-weight: 800; color: var(--green-700);">2</div>
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem;">Automatic Tracking Starts</h3>
+            <p style="color: var(--surface-700); line-height: 1.6;">We poll presence status every 2 minutes for all team members. Data is stored securely in our encrypted database.</p>
+          </div>
+
+          <div style="text-align: center;">
+            <div style="width: 64px; height: 64px; background: var(--green-100); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; font-weight: 800; color: var(--green-700);">3</div>
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem;">View Availability Insights</h3>
+            <p style="color: var(--surface-700); line-height: 1.6;">Access 24-hour timelines, peak availability windows, and timezone-aware scheduling recommendations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 5rem 0; background: var(--surface-50);">
+    <div class="container">
+      <div style="max-width: 800px; margin: 0 auto;">
+        <h2 class="section-title" style="text-align: center; margin-bottom: 3rem;">Distributed Team Challenges We Solve</h2>
+
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+          <div style="background: white; padding: 2rem; border-radius: 12px; border-left: 4px solid var(--green-600);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--surface-900); margin-bottom: 0.75rem;">❌ Problem: "When can we meet?"</h3>
+            <p style="color: var(--surface-700); line-height: 1.7; margin-bottom: 1rem;">
+              Coordinating meetings across US, Europe, and Asia is painful. Finding a time where everyone is Available requires manual calendar checking and timezone math.
+            </p>
+            <p style="color: var(--green-700); font-weight: 600;">
+              ✅ Solution: The Green Dots analyzes 30 days of presence data to identify recurring 2-3 hour windows where 80%+ of your team is Available.
+            </p>
+          </div>
+
+          <div style="background: white; padding: 2rem; border-radius: 12px; border-left: 4px solid var(--green-600);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--surface-900); margin-bottom: 0.75rem;">❌ Problem: Timezone burnout</h3>
+            <p style="color: var(--surface-700); line-height: 1.7; margin-bottom: 1rem;">
+              Remote employees in Asia join 9 PM meetings. European team members start at 7 AM for US calls. Work-life balance suffers.
+            </p>
+            <p style="color: var(--green-700); font-weight: 600;">
+              ✅ Solution: Presence reports show when team members are working outside typical hours. Flag potential burnout before it becomes a problem.
+            </p>
+          </div>
+
+          <div style="background: white; padding: 2rem; border-radius: 12px; border-left: 4px solid var(--green-600);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--surface-900); margin-bottom: 0.75rem;">❌ Problem: "Is anyone online to help?"</h3>
+            <p style="color: var(--surface-700); line-height: 1.7; margin-bottom: 1rem;">
+              Support issues arise at 2 AM PST. No idea if anyone in Europe or Asia is available to respond.
+            </p>
+            <p style="color: var(--green-700); font-weight: 600;">
+              ✅ Solution: Real-time availability dashboard shows who's online right now across all timezones. Quickly find available team members.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq">
+    <div class="container">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+
+      <dl class="faq-list">
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>How does timezone support work?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              The Green Dots detects each user's timezone from their Microsoft 365 profile. All timestamps are stored in UTC and displayed in each user's local timezone. Supports 35+ countries and all common timezones.
+            </div>
+          </dd>
+        </div>
+
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Can I see availability for specific time windows?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              <strong>Yes.</strong> Filter by time range (e.g., "2 PM - 4 PM UTC") to see which team members are typically Available during that window. Perfect for scheduling recurring meetings.
+            </div>
+          </dd>
+        </div>
+
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Does this track work hours or just presence?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              The Green Dots tracks Microsoft Teams presence status only (Available, Busy, Away, Offline). We don't track applications, websites, or productivity metrics. Think of it as "when was their Teams status green?" not "what were they doing?"
+            </div>
+          </dd>
+        </div>
+
+        <div class="faq-item">
+          <dt class="faq-question">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>How much does it cost?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 10 13 14 9"/>
+              </svg>
+            </button>
+          </dt>
+          <dd class="faq-answer">
+            <div class="faq-content">
+              <strong>$2.00 per user per month</strong> for teams of 5-24. Volume discounts available for 25+ users. 7-day free trial, no credit card required.
+            </div>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="cta-final">
+    <div class="container">
+      <div class="cta-content">
+        <h2 class="cta-title">Start Tracking Team Availability Today</h2>
+        <p class="cta-subtitle">
+          Setup in 5 minutes. Works with Microsoft 365 Business, Enterprise, and Education.
+        </p>
+        <a href="https://app.thegreendots.io" class="btn-primary btn-large">
+          Start 7-Day Free Trial
+        </a>
+        <p class="cta-note">No credit card required • Cancel anytime • GDPR compliant</p>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Layout>
