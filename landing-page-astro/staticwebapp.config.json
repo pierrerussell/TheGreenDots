@@ -1,0 +1,27 @@
+{
+  "routes": [
+    {
+      "route": "/blog/*",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/privacy",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/terms",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/404.html",
+    "exclude": ["/images/*", "/favicon.ico", "/*.{css,js,json,xml,txt}"]
+  },
+  "platform": {
+    "apiRuntime": "node:18"
+  }
+}

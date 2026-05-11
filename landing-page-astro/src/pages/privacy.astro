@@ -1,0 +1,397 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout
+  title="Privacy Policy - The Green Dots"
+  description="The Green Dots privacy policy. Learn how we collect, use, and protect your Microsoft 365 presence data."
+>
+  <Header />
+
+  <article class="legal-page">
+    <div class="container">
+      <header class="legal-header">
+        <h1>Privacy Policy</h1>
+        <p class="legal-updated">Last updated: May 11, 2026</p>
+      </header>
+
+      <div class="legal-content">
+        <section>
+          <h2>1. Introduction</h2>
+          <p>
+            The Green Dots ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Microsoft 365 presence tracking service at thegreendots.io and app.thegreendots.io.
+          </p>
+          <p>
+            By using The Green Dots, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our service.
+          </p>
+        </section>
+
+        <section>
+          <h2>2. Information We Collect</h2>
+
+          <h3>2.1 Microsoft 365 Presence Data</h3>
+          <p>We collect and store the following presence information from your Microsoft 365 account:</p>
+          <ul>
+            <li><strong>Availability status</strong> - Whether users are Available, Busy, Away, Do Not Disturb, or Offline</li>
+            <li><strong>Activity status</strong> - Contextual information like InAMeeting, InACall, Presenting, or Focusing</li>
+            <li><strong>Timestamps</strong> - When each status change occurred</li>
+            <li><strong>User identifiers</strong> - Microsoft 365 user IDs, display names, and email addresses</li>
+          </ul>
+
+          <h3>2.2 What We DO NOT Collect</h3>
+          <p>We want to be clear about what we do not track:</p>
+          <ul>
+            <li>❌ <strong>No screenshots</strong> - We never capture your screen</li>
+            <li>❌ <strong>No keystroke logging</strong> - We don't monitor what you type</li>
+            <li>❌ <strong>No website tracking</strong> - We don't see which websites you visit</li>
+            <li>❌ <strong>No application monitoring</strong> - We don't track which apps you use</li>
+            <li>❌ <strong>No mouse movement tracking</strong> - We don't monitor cursor activity</li>
+            <li>❌ <strong>No file access logs</strong> - We don't see which files you open</li>
+            <li>❌ <strong>No email content</strong> - We never read your emails</li>
+            <li>❌ <strong>No chat messages</strong> - We don't access Teams chat content</li>
+          </ul>
+
+          <h3>2.3 Account and Organization Information</h3>
+          <ul>
+            <li>Organization name and Microsoft 365 tenant ID</li>
+            <li>Administrator email addresses and contact information</li>
+            <li>Billing information (processed securely through Stripe)</li>
+            <li>Subscription plan and seat count</li>
+          </ul>
+
+          <h3>2.4 Usage Data</h3>
+          <ul>
+            <li>Login timestamps and IP addresses</li>
+            <li>Feature usage within The Green Dots application</li>
+            <li>Browser type, device type, and operating system</li>
+            <li>Analytics data collected via Microsoft Clarity (anonymized)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>3. How We Use Your Information</h2>
+
+          <p>We use the collected information for the following purposes:</p>
+
+          <h3>3.1 Service Delivery</h3>
+          <ul>
+            <li>Display 24-hour presence timelines for your team members</li>
+            <li>Generate automated weekly reports and availability summaries</li>
+            <li>Calculate presence statistics and work-life balance metrics</li>
+            <li>Identify peak availability windows across timezones</li>
+          </ul>
+
+          <h3>3.2 Service Improvement</h3>
+          <ul>
+            <li>Analyze aggregate usage patterns to improve our features</li>
+            <li>Troubleshoot technical issues and provide customer support</li>
+            <li>Develop new features based on user needs</li>
+          </ul>
+
+          <h3>3.3 Communication</h3>
+          <ul>
+            <li>Send weekly presence reports via email</li>
+            <li>Notify you of important service updates or security issues</li>
+            <li>Respond to your inquiries and support requests</li>
+            <li>Send promotional emails (you can opt out anytime)</li>
+          </ul>
+
+          <h3>3.4 Legal Compliance</h3>
+          <ul>
+            <li>Comply with applicable laws and regulations</li>
+            <li>Enforce our Terms of Service and protect our legal rights</li>
+            <li>Prevent fraud and ensure service security</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>4. Data Storage and Security</h2>
+
+          <h3>4.1 Data Location</h3>
+          <p>
+            Your presence data is stored on Microsoft Azure servers located in the United States. We use Azure's enterprise-grade infrastructure with built-in encryption and security controls.
+          </p>
+
+          <h3>4.2 Security Measures</h3>
+          <ul>
+            <li><strong>Encryption in transit</strong> - All data is transmitted over HTTPS (TLS 1.3)</li>
+            <li><strong>Encryption at rest</strong> - Database is encrypted using AES-256</li>
+            <li><strong>Access controls</strong> - Role-based access with multi-factor authentication</li>
+            <li><strong>Regular backups</strong> - Daily automated backups with 30-day retention</li>
+            <li><strong>Security monitoring</strong> - 24/7 threat detection and intrusion prevention</li>
+            <li><strong>Penetration testing</strong> - Annual third-party security audits</li>
+          </ul>
+
+          <h3>4.3 Data Retention</h3>
+          <p>
+            We retain your presence data for as long as your subscription is active, plus 90 days after cancellation. You can request immediate deletion of all data by contacting support@thegreendots.io.
+          </p>
+        </section>
+
+        <section>
+          <h2>5. Data Sharing and Disclosure</h2>
+
+          <h3>5.1 We DO NOT Sell Your Data</h3>
+          <p>
+            We do not sell, rent, or trade your presence data to third parties for marketing purposes. Your data is yours.
+          </p>
+
+          <h3>5.2 Service Providers</h3>
+          <p>We may share data with trusted service providers who assist us in operating our service:</p>
+          <ul>
+            <li><strong>Microsoft Azure</strong> - Cloud hosting and database services</li>
+            <li><strong>Stripe</strong> - Payment processing (they never see your presence data)</li>
+            <li><strong>Microsoft Clarity</strong> - Website analytics (anonymized data only)</li>
+            <li><strong>SendGrid</strong> - Email delivery for weekly reports</li>
+          </ul>
+          <p>All service providers are contractually obligated to protect your data and use it only for specified purposes.</p>
+
+          <h3>5.3 Legal Requirements</h3>
+          <p>We may disclose your information if required by law, such as:</p>
+          <ul>
+            <li>In response to a valid court order or subpoena</li>
+            <li>To comply with government investigations</li>
+            <li>To protect our legal rights or prevent illegal activity</li>
+            <li>In connection with a merger, acquisition, or sale of assets (you will be notified)</li>
+          </ul>
+
+          <h3>5.4 Within Your Organization</h3>
+          <p>
+            Presence data is accessible to administrators in your organization who have been granted access. You control who in your organization can view presence history through role-based permissions.
+          </p>
+        </section>
+
+        <section>
+          <h2>6. Your Rights (GDPR & CCPA)</h2>
+
+          <p>If you are located in the European Union (GDPR) or California (CCPA), you have the following rights:</p>
+
+          <h3>6.1 Right to Access</h3>
+          <p>You can request a copy of all personal data we hold about you.</p>
+
+          <h3>6.2 Right to Rectification</h3>
+          <p>You can request correction of inaccurate or incomplete data.</p>
+
+          <h3>6.3 Right to Erasure ("Right to be Forgotten")</h3>
+          <p>You can request deletion of your data, subject to legal retention requirements.</p>
+
+          <h3>6.4 Right to Data Portability</h3>
+          <p>You can request your data in a machine-readable format (CSV or JSON).</p>
+
+          <h3>6.5 Right to Restrict Processing</h3>
+          <p>You can request that we temporarily stop processing your data.</p>
+
+          <h3>6.6 Right to Object</h3>
+          <p>You can object to processing of your data for direct marketing purposes.</p>
+
+          <h3>6.7 How to Exercise Your Rights</h3>
+          <p>
+            To exercise any of these rights, email us at <strong>privacy@thegreendots.io</strong>. We will respond within 30 days.
+          </p>
+        </section>
+
+        <section>
+          <h2>7. Cookies and Tracking</h2>
+
+          <h3>7.1 Essential Cookies</h3>
+          <p>We use cookies that are necessary for the service to function:</p>
+          <ul>
+            <li><strong>Authentication cookies</strong> - Keep you logged in</li>
+            <li><strong>Session cookies</strong> - Maintain your session state</li>
+          </ul>
+
+          <h3>7.2 Analytics Cookies</h3>
+          <p>We use Microsoft Clarity to understand how users interact with our website:</p>
+          <ul>
+            <li>Page views and navigation patterns</li>
+            <li>Anonymized heatmaps and session recordings</li>
+            <li>No personally identifiable information is collected</li>
+          </ul>
+
+          <h3>7.3 Managing Cookies</h3>
+          <p>
+            You can disable cookies in your browser settings, but this may affect service functionality. Essential cookies cannot be disabled as they are required for authentication.
+          </p>
+        </section>
+
+        <section>
+          <h2>8. Third-Party Links</h2>
+          <p>
+            Our website may contain links to third-party websites (e.g., Microsoft documentation, support resources). We are not responsible for the privacy practices of these external sites. Please review their privacy policies before providing any information.
+          </p>
+        </section>
+
+        <section>
+          <h2>9. Children's Privacy</h2>
+          <p>
+            The Green Dots is intended for business use and is not directed at children under 16. We do not knowingly collect information from children. If you believe we have inadvertently collected data from a child, please contact us immediately.
+          </p>
+        </section>
+
+        <section>
+          <h2>10. International Data Transfers</h2>
+          <p>
+            If you are located outside the United States, your data will be transferred to and processed in the U.S. We ensure adequate safeguards are in place, including:
+          </p>
+          <ul>
+            <li>Standard Contractual Clauses (SCCs) approved by the European Commission</li>
+            <li>Adherence to GDPR requirements for international transfers</li>
+            <li>Azure's compliance with EU-U.S. Data Privacy Framework</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>11. Changes to This Privacy Policy</h2>
+          <p>
+            We may update this Privacy Policy from time to time. We will notify you of material changes by:
+          </p>
+          <ul>
+            <li>Posting the updated policy on this page with a new "Last updated" date</li>
+            <li>Sending an email notification to account administrators</li>
+            <li>Displaying a prominent notice in the application</li>
+          </ul>
+          <p>
+            Continued use of the service after changes constitutes acceptance of the updated policy.
+          </p>
+        </section>
+
+        <section>
+          <h2>12. Contact Us</h2>
+          <p>If you have questions or concerns about this Privacy Policy, please contact us:</p>
+
+          <div class="contact-info">
+            <p><strong>Email:</strong> privacy@thegreendots.io</p>
+            <p><strong>Data Protection Officer:</strong> dpo@thegreendots.io</p>
+            <p><strong>Support:</strong> support@thegreendots.io</p>
+          </div>
+
+          <p>
+            For GDPR-related inquiries, EU residents can contact our Data Protection Officer at dpo@thegreendots.io.
+          </p>
+        </section>
+
+        <section>
+          <h2>13. Summary (TL;DR)</h2>
+          <ul>
+            <li>✅ We only track Microsoft 365 presence status (Available, Busy, Away, Offline)</li>
+            <li>✅ We DO NOT take screenshots, log keystrokes, or monitor applications</li>
+            <li>✅ Your data is encrypted in transit and at rest</li>
+            <li>✅ We do not sell your data to third parties</li>
+            <li>✅ You can request deletion of your data at any time</li>
+            <li>✅ We comply with GDPR and CCPA regulations</li>
+            <li>✅ Contact privacy@thegreendots.io for any concerns</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </article>
+
+  <Footer />
+</Layout>
+
+<style>
+  .legal-page {
+    padding: 4rem 0;
+    background: white;
+  }
+
+  .legal-header {
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    text-align: center;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid oklch(0.94 0.006 260);
+  }
+
+  .legal-header h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    color: oklch(0.20 0.010 260);
+    margin-bottom: 0.5rem;
+  }
+
+  .legal-updated {
+    font-size: 0.875rem;
+    color: oklch(0.65 0.010 260);
+  }
+
+  .legal-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .legal-content section {
+    margin-bottom: 3rem;
+  }
+
+  .legal-content h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: oklch(0.20 0.010 260);
+    margin-bottom: 1rem;
+    padding-top: 1rem;
+  }
+
+  .legal-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: oklch(0.30 0.010 260);
+    margin: 1.5rem 0 0.75rem;
+  }
+
+  .legal-content p {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: oklch(0.40 0.010 260);
+    margin-bottom: 1rem;
+  }
+
+  .legal-content ul {
+    margin: 1rem 0 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .legal-content li {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: oklch(0.40 0.010 260);
+    margin-bottom: 0.5rem;
+  }
+
+  .legal-content strong {
+    font-weight: 600;
+    color: oklch(0.20 0.010 260);
+  }
+
+  .contact-info {
+    background: oklch(0.97 0.004 260);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid oklch(0.62 0.15 155);
+    margin: 1.5rem 0;
+  }
+
+  .contact-info p {
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .legal-page {
+      padding: 2rem 0;
+    }
+
+    .legal-header h1 {
+      font-size: 2rem;
+    }
+
+    .legal-content h2 {
+      font-size: 1.5rem;
+    }
+
+    .legal-content h3 {
+      font-size: 1.125rem;
+    }
+  }
+</style>

@@ -1,0 +1,249 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export async function getStaticPaths() {
+  const blogPosts = await getCollection('blog');
+  return blogPosts.map((post) => ({
+    params: { id: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+---
+
+<Layout
+  title={`${post.data.title} - The Green Dots Blog`}
+  description={post.data.description}
+  ogImage={post.data.ogImage}
+>
+  <Header />
+
+  <article class="blog-post">
+    <div class="container">
+      <header class="blog-post-header">
+        <div class="blog-post-meta">
+          <span class="blog-post-category">{post.data.category}</span>
+          <time datetime={post.data.pubDate.toISOString()}>
+            {post.data.pubDate.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </time>
+        </div>
+        <h1 class="blog-post-title">{post.data.title}</h1>
+        <p class="blog-post-description">{post.data.description}</p>
+      </header>
+
+      <div class="blog-post-content">
+        <Content />
+      </div>
+
+      <footer class="blog-post-footer">
+        <a href="/blog" class="btn-secondary">← Back to Blog</a>
+        <a href="https://app.thegreendots.io" class="btn-primary">Start Free Trial</a>
+      </footer>
+    </div>
+  </article>
+
+  <Footer />
+</Layout>
+
+<style>
+  .blog-post {
+    padding: 4rem 0;
+  }
+
+  .blog-post-header {
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    text-align: center;
+  }
+
+  .blog-post-meta {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    color: oklch(0.65 0.010 260);
+  }
+
+  .blog-post-category {
+    font-weight: 600;
+    color: oklch(0.62 0.15 155);
+  }
+
+  .blog-post-title {
+    font-size: 3rem;
+    font-weight: 800;
+    color: oklch(0.20 0.010 260);
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .blog-post-description {
+    font-size: 1.25rem;
+    color: oklch(0.65 0.010 260);
+    line-height: 1.6;
+  }
+
+  .blog-post-content {
+    max-width: 800px;
+    margin: 0 auto 4rem;
+    font-size: 1.125rem;
+    line-height: 1.8;
+    color: oklch(0.30 0.010 260);
+  }
+
+  .blog-post-content :global(h2) {
+    font-size: 2rem;
+    font-weight: 700;
+    color: oklch(0.20 0.010 260);
+    margin: 3rem 0 1rem;
+  }
+
+  .blog-post-content :global(h3) {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: oklch(0.20 0.010 260);
+    margin: 2rem 0 1rem;
+  }
+
+  .blog-post-content :global(p) {
+    margin-bottom: 1.5rem;
+  }
+
+  .blog-post-content :global(ul),
+  .blog-post-content :global(ol) {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+  }
+
+  .blog-post-content :global(li) {
+    margin-bottom: 0.5rem;
+  }
+
+  .blog-post-content :global(pre) {
+    background: oklch(0.20 0.010 260);
+    color: oklch(0.97 0.004 260);
+    padding: 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 2rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .blog-post-content :global(code) {
+    font-family: 'IBM Plex Mono', monospace;
+    background: oklch(0.94 0.006 260);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  .blog-post-content :global(pre code) {
+    background: none;
+    padding: 0;
+  }
+
+  .blog-post-content :global(blockquote) {
+    border-left: 4px solid oklch(0.62 0.15 155);
+    padding-left: 1.5rem;
+    margin: 2rem 0;
+    font-style: italic;
+    color: oklch(0.65 0.010 260);
+  }
+
+  .blog-post-content :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-size: 1rem;
+  }
+
+  .blog-post-content :global(th),
+  .blog-post-content :global(td) {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border: 1px solid oklch(0.94 0.006 260);
+  }
+
+  .blog-post-content :global(th) {
+    background: oklch(0.97 0.004 260);
+    font-weight: 600;
+    color: oklch(0.20 0.010 260);
+  }
+
+  .blog-post-content :global(a) {
+    color: oklch(0.62 0.15 155);
+    text-decoration: none;
+    border-bottom: 1px solid oklch(0.62 0.15 155 / 0.3);
+    transition: border-color 0.2s ease;
+  }
+
+  .blog-post-content :global(a:hover) {
+    border-bottom-color: oklch(0.62 0.15 155);
+  }
+
+  .blog-post-content :global(strong) {
+    font-weight: 600;
+    color: oklch(0.20 0.010 260);
+  }
+
+  .blog-post-content :global(hr) {
+    border: none;
+    border-top: 1px solid oklch(0.94 0.006 260);
+    margin: 3rem 0;
+  }
+
+  .blog-post-footer {
+    max-width: 800px;
+    margin: 0 auto;
+    padding-top: 3rem;
+    border-top: 1px solid oklch(0.94 0.006 260);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .blog-post {
+      padding: 2rem 0;
+    }
+
+    .blog-post-title {
+      font-size: 2rem;
+    }
+
+    .blog-post-description {
+      font-size: 1rem;
+    }
+
+    .blog-post-content {
+      font-size: 1rem;
+    }
+
+    .blog-post-content :global(h2) {
+      font-size: 1.5rem;
+    }
+
+    .blog-post-content :global(h3) {
+      font-size: 1.25rem;
+    }
+
+    .blog-post-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
