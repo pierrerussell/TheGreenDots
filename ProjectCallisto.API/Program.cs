@@ -246,9 +246,9 @@ app.Use(async (context, next) =>
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.clarity.ms https://scripts.clarity.ms; " + // Angular needs unsafe-inline and unsafe-eval, allow Clarity
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " + // Angular needs unsafe-inline, allow Google Fonts
-        "img-src 'self' data: https://c.clarity.ms; " + // Allow data URIs and Clarity images
+        "img-src 'self' data: https://c.clarity.ms https://c.bing.com; " + // Allow data URIs, Clarity images and Bing tracking pixels
         "font-src 'self' data: https://fonts.gstatic.com; " + // Allow Google Fonts and data URIs
-        "connect-src 'self' https://www.clarity.ms; " + // Allow API calls to same origin and Clarity
+        "connect-src 'self' https://www.clarity.ms https://s.clarity.ms; " + // Allow API calls to same origin and Clarity endpoints
         "frame-ancestors 'none'; " + // Same as X-Frame-Options: DENY
         "base-uri 'self'; " +
         "form-action 'self'");
