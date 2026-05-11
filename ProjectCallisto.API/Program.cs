@@ -244,9 +244,9 @@ app.Use(async (context, next) =>
     // Content Security Policy - allow scripts/styles from same origin only
     context.Response.Headers.Append("Content-Security-Policy",
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.clarity.ms; " + // Angular needs unsafe-inline and unsafe-eval, allow Clarity
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.clarity.ms https://scripts.clarity.ms; " + // Angular needs unsafe-inline and unsafe-eval, allow Clarity
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " + // Angular needs unsafe-inline, allow Google Fonts
-        "img-src 'self' data:; " + // Allow data URIs for inline images
+        "img-src 'self' data: https://c.clarity.ms; " + // Allow data URIs and Clarity images
         "font-src 'self' data: https://fonts.gstatic.com; " + // Allow Google Fonts and data URIs
         "connect-src 'self' https://www.clarity.ms; " + // Allow API calls to same origin and Clarity
         "frame-ancestors 'none'; " + // Same as X-Frame-Options: DENY
